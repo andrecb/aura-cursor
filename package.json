@@ -1,0 +1,57 @@
+{
+  "name": "aura-cursor",
+  "version": "1.0.1",
+  "type": "module",
+  "description": "Aura Cursor is a tool that helps you to create a cursor for your website.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "rollup -c",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:run": "vitest run",
+    "lint": "eslint . --ext .js,.ts",
+    "prepare": "npm run build",
+    "example": "npm run build && npx http-server . -p 8080 -o example.html",
+    "version:patch": "npm version patch -m \"chore: bump version to %s\"",
+    "version:minor": "npm version minor -m \"chore: bump version to %s\"",
+    "version:major": "npm version major -m \"chore: bump version to %s\"",
+    "release": "npm run build && npm run test:run"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/andrecb/aura-cursor.git"
+  },
+  "keywords": [
+    "cursor",
+    "aura",
+    "aura-cursor",
+    "aura-cursor-ai",
+    "aura-cursor-ai-tool",
+    "aura-cursor-ai-tool-for-website",
+    "aura-cursor-ai-tool-for-website-development"
+  ],
+  "author": "André Barros <contato@andrebarros.dev>",
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "devDependencies": {
+    "@rollup/plugin-commonjs": "^29.0.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@rollup/plugin-terser": "^0.4.4",
+    "@types/node": "^24.10.1",
+    "@vitest/ui": "^4.0.15",
+    "eslint": "^9.39.1",
+    "eslint-config-prettier": "^10.1.8",
+    "jsdom": "^27.2.0",
+    "prettier": "^3.7.4",
+    "rollup": "^4.53.3",
+    "rollup-plugin-typescript2": "^0.36.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.15"
+  }
+}
