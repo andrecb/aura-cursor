@@ -16,10 +16,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.2] - 2025-12-07
 
-### Fixed
-- Fixed React import resolution issue where `react.esm.js` was trying to import `'./aura-cursor'` which doesn't exist in dist folder
-- Added Rollup plugin to rewrite relative imports to package imports in React build output
-- React components now correctly resolve `aura-cursor` package imports in Next.js and other bundlers
+### Added
+- Native React support with hooks and components
+- Separate entry points for vanilla JavaScript and React usage
+- Updated documentation with React usage examples
+
+### Changed
+- Improved build configuration for better module resolution
+- Updated ESLint configuration to v9
 
 ## [1.0.1] - 2024-12-07
 
