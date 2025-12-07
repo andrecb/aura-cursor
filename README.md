@@ -1,6 +1,10 @@
-# ✨ Aura Cursor
-
-A lightweight, customizable cursor library for modern web applications. Create beautiful custom cursors that follow your mouse with smooth animations and interactive hover effects.
+<div align="center">
+  <img src="https://github.com/andrecb/aura-cursor/blob/main/assets/images/logo.png?raw=true" alt="Aura Cursor Logo" width="200" />
+  
+  # ✨ Aura Cursor
+  
+  A lightweight, customizable cursor library for modern web applications. Create beautiful custom cursors that follow your mouse with smooth animations and interactive hover effects.
+</div>
 
 ## Features
 
@@ -64,6 +68,68 @@ cursor.init();
   
   cursor.init();
 </script>
+```
+
+### React
+
+#### Using the Hook
+
+```tsx
+import { useAuraCursor } from 'aura-cursor';
+
+function App() {
+  useAuraCursor({
+    size: 20,
+    color: '#000000',
+    opacity: 0.5,
+    speed: 0.3
+  });
+
+  return <div>Your app content</div>;
+}
+```
+
+#### Using the Component
+
+```tsx
+import { AuraCursorComponent } from 'aura-cursor';
+
+function App() {
+  return (
+    <>
+      <AuraCursorComponent
+        size={20}
+        color="#000000"
+        opacity={0.5}
+        speed={0.3}
+      />
+      <div>Your app content</div>
+    </>
+  );
+}
+```
+
+The component also supports an `enabled` prop to conditionally enable/disable the cursor:
+
+```tsx
+import { AuraCursorComponent } from 'aura-cursor';
+
+function App() {
+  const [enabled, setEnabled] = useState(true);
+
+  return (
+    <>
+      <AuraCursorComponent
+        enabled={enabled}
+        size={20}
+        color="#000000"
+      />
+      <button onClick={() => setEnabled(!enabled)}>
+        Toggle Cursor
+      </button>
+    </>
+  );
+}
 ```
 
 ## Configuration Options
