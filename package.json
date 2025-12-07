@@ -5,6 +5,20 @@
   "description": "Aura Cursor is a tool that helps you to create a cursor for your website.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.esm.js",
+      "require": "./dist/index.cjs.js",
+      "default": "./dist/index.esm.js"
+    },
+    "./react": {
+      "types": "./dist/react-index.d.ts",
+      "import": "./dist/react.esm.js",
+      "require": "./dist/react.cjs.js",
+      "default": "./dist/react.esm.js"
+    }
+  },
   "files": [
     "dist"
   ],

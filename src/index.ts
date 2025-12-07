@@ -1,6 +1,6 @@
 // Re-export from aura-cursor.ts
-export { AuraCursor as AuraCursorClass, type AuraCursorOptions, type AuraCursorPointerOptions } from './aura-cursor';
+export { AuraCursor, type AuraCursorOptions, type AuraCursorPointerOptions } from './aura-cursor';
 
-// Export React components and hooks
-export { useAuraCursor, AuraCursor } from './react';
+// Re-export React components and hooks
+export { useAuraCursor, AuraCursor as AuraCursorReact } from './react';
 export type { AuraCursorProps } from './react';
