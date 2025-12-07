@@ -3,6 +3,23 @@ import commonjs from '@rollup/plugin-commonjs';
 import typescript from 'rollup-plugin-typescript2';
 import terser from '@rollup/plugin-terser';
 
+const rewriteImportPlugin = () => ({
+  name: 'rewrite-import',
+  renderChunk(code, chunk) {
+    if (chunk.fileName.includes('react.')) {
+      const modifiedCode = code
+        .replace(/from\s*['"]\.\/aura-cursor['"]/g, "from 'aura-cursor'")
+        .replace(/from\s*["']\.\/aura-cursor["']/g, "from 'aura-cursor'")
+        .replace(/require\s*\(\s*['"]\.\/aura-cursor['"]\s*\)/g, "require('aura-cursor')");
+      return {
+        code: modifiedCode,
+        map: null
+      };
+    }
+    return null;
+  }
+});
+
 export default [
   {
     input: 'src/index.ts',
@@ -28,7 +45,7 @@ export default [
   },
   {
     input: 'src/react-index.ts',
-    external: ['react', 'react-dom', './aura-cursor'],
+    external: ['react', 'react-dom', 'aura-cursor', './aura-cursor'],
     output: [
       { file: 'dist/react.esm.js', format: 'es', exports: 'named' },
       { file: 'dist/react.cjs.js', format: 'cjs', exports: 'named' }
@@ -44,6 +61,7 @@ export default [
           }
         }
       }),
+      rewriteImportPlugin(),
       terser()
     ]
   }
