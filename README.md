@@ -92,12 +92,12 @@ function App() {
 #### Using the Component
 
 ```tsx
-import { AuraCursorComponent } from 'aura-cursor';
+import { AuraCursor } from 'aura-cursor/react';
 
 function App() {
   return (
     <>
-      <AuraCursorComponent
+      <AuraCursor
         size={20}
         color="#000000"
         opacity={0.5}
@@ -112,14 +112,15 @@ function App() {
 The component also supports an `enabled` prop to conditionally enable/disable the cursor:
 
 ```tsx
-import { AuraCursorComponent } from 'aura-cursor';
+import { AuraCursor } from 'aura-cursor/react';
+import { useState } from 'react';
 
 function App() {
   const [enabled, setEnabled] = useState(true);
 
   return (
     <>
-      <AuraCursorComponent
+      <AuraCursor
         enabled={enabled}
         size={20}
         color="#000000"
@@ -131,6 +132,8 @@ function App() {
   );
 }
 ```
+
+**Note**: When importing from `'aura-cursor'`, you get the `AuraCursor` class. When importing from `'aura-cursor/react'`, you get the `AuraCursor` React component. Both share the same name but serve different purposes.
 
 ## Configuration Options
 
