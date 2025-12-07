@@ -1,0 +1,120 @@
+# Source files (only dist should be published)
+src/
+test/
+*.test.ts
+*.test.js
+*.spec.ts
+*.spec.js
+
+# Development files
+example.html
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+
+# Configuration files (not needed in published package)
+tsconfig.json
+vitest.config.ts
+rollup.config.js
+.eslintrc*
+.prettierrc*
+.editorconfig
+.versionrc.json
+
+# Documentation (README.md and LICENSE are included by default)
+CHANGELOG.md
+docs/
+
+# Assets (if not needed in package)
+assets/
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico
+!dist/**/*.png
+!dist/**/*.jpg
+!dist/**/*.svg
+
+# Git files
+.git/
+.gitignore
+.gitattributes
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+.circleci/
+
+# Environment files
+.env
+.env.*
+.envrc
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies (should not be in package)
+node_modules/
+
+# Build cache
+.cache/
+.temp/
+*.tsbuildinfo
+.rollup.cache
+.vite
+.parcel-cache
+
+# Testing
+coverage/
+.nyc_output/
+.vitest/
+*.lcov
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+Desktop.ini
+
+# Optional npm cache
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn
+.yarn-integrity
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+# Misc
+*.pem
+.vercel
+
