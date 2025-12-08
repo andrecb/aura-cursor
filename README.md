@@ -4,6 +4,8 @@
   # ✨ Aura Cursor
   
   A lightweight, customizable cursor library for modern web applications. Create beautiful custom cursors that follow your mouse with smooth animations and interactive hover effects.
+  
+  **[🎮 Try it live](https://andrebarros.dev/projects/aura-cursor)**
 </div>
 
 ## Features
@@ -13,9 +15,11 @@
 - 🎯 **Pointer Effects** - Different styles when hovering over clickable elements
 - ⚡ **Smooth Animation** - Fluid cursor movement with configurable speed
 - 🎭 **Flexible Options** - Hide default cursor, interactive-only mode, outline mode, and more
+- 🌈 **Hover Colors** - Custom colors when hovering over interactive elements
 - 📦 **Lightweight** - Small bundle size with zero dependencies
 - 🔧 **TypeScript** - Full TypeScript support with type definitions
 - 👁️ **Center Dot Indicator** - Small dot in the center when default cursor is hidden
+- 🪟 **Smart Visibility** - Automatically hides when mouse leaves the browser window
 
 ## Installation
 
@@ -36,6 +40,10 @@ yarn add aura-cursor
 ```bash
 pnpm add aura-cursor
 ```
+
+## 🎮 Live Demo
+
+Try Aura Cursor in action: **[https://andrebarros.dev/projects/aura-cursor](https://andrebarros.dev/projects/aura-cursor)**
 
 ## Quick Start
 
@@ -150,6 +158,8 @@ function App() {
 | `interactiveOnly` | `boolean` | `false` | Show cursor only on interactive elements |
 | `outlineMode` | `boolean` | `false` | Show cursor as outline (border only) with center dot |
 | `outlineWidth` | `number` | `2` | Border width in pixels when outline mode is enabled |
+| `cursorDotColor` | `string` | `undefined` | Color for the center dot in outline mode (uses primary color if not provided) |
+| `hoverColor` | `string` | `undefined` | Color when hovering over interactive elements (uses primary color or pointer color if not provided) |
 | `pointer` | `AuraCursorPointerOptions` | `undefined` | Options for pointer hover effects |
 
 ### AuraCursorPointerOptions
@@ -231,6 +241,8 @@ const cursor = new AuraCursor({
 cursor.init();
 ```
 
+When `interactiveOnly` is enabled, the cursor will only appear when hovering over interactive elements (links, buttons, etc.). The cursor will automatically hide when the mouse leaves interactive areas or exits the browser window.
+
 ### Outline Mode
 
 ```typescript
@@ -241,13 +253,34 @@ const cursor = new AuraCursor({
   color: '#000000',
   opacity: 0.5,
   outlineMode: true,
-  outlineWidth: 2
+  outlineWidth: 2,
+  cursorDotColor: '#ff0000'
 });
 
 cursor.init();
 ```
 
-This mode displays the cursor as a border-only circle with a center dot, instead of a filled circle. You can customize the border width using the `outlineWidth` option (default: 2px).
+This mode displays the cursor as a border-only circle with a center dot, instead of a filled circle. The inner dot follows the mouse instantly, while the outer circle follows with a smooth delay. You can customize the border width using the `outlineWidth` option (default: 2px) and the center dot color using `cursorDotColor`.
+
+### With Hover Color
+
+```typescript
+import { AuraCursor } from 'aura-cursor';
+
+const cursor = new AuraCursor({
+  size: 20,
+  color: '#000000',
+  hoverColor: '#ff6b6b',
+  pointer: {
+    size: 30,
+    scale: 1.5
+  }
+});
+
+cursor.init();
+```
+
+The `hoverColor` option allows you to set a specific color that will be used when hovering over interactive elements. This color takes precedence over the `pointer.color` option.
 
 ### Update Options Dynamically
 
@@ -307,6 +340,30 @@ cursor.updateOptions({
 });
 ```
 
+## TypeScript Support
+
+The library is written in TypeScript and provides full type definitions. All interfaces are exported for use in your TypeScript projects:
+
+```typescript
+import type { 
+  AuraCursorOptions, 
+  AuraCursorPointerOptions, 
+  AuraCursorProps 
+} from 'aura-cursor';
+
+// Use the types in your code
+const options: AuraCursorOptions = {
+  size: 20,
+  color: '#000000',
+  hoverColor: '#ff0000'
+};
+
+// Extend interfaces if needed
+interface ExtendedOptions extends AuraCursorOptions {
+  customProperty?: string;
+}
+```
+
 ## Element Detection
 
 The cursor automatically detects interactive elements including:
@@ -318,6 +375,8 @@ The cursor automatically detects interactive elements including:
 - Elements with `cursor: pointer` in CSS
 - Interactive inputs (range, color, checkbox)
 - Elements inside clickable containers
+
+The cursor also automatically hides when the mouse leaves the browser window (e.g., when moving to the address bar or outside the viewport).
 
 ## Browser Support
 

@@ -25,11 +25,27 @@ const rewriteImportPlugin = () => ({
 const moveDeclarationFilesPlugin = () => ({
   name: 'move-declaration-files',
   writeBundle() {
+    const auraCursorSrcPath = join(process.cwd(), 'dist/src/aura-cursor.d.ts');
+    const auraCursorDestPath = join(process.cwd(), 'dist/aura-cursor.d.ts');
+    if (existsSync(auraCursorSrcPath) && !existsSync(auraCursorDestPath)) {
+      let content = readFileSync(auraCursorSrcPath, 'utf-8');
+      writeFileSync(auraCursorDestPath, content);
+    }
+
+    const indexSrcPath = join(process.cwd(), 'dist/src/index.d.ts');
+    const indexDestPath = join(process.cwd(), 'dist/index.d.ts');
+    if (existsSync(indexSrcPath)) {
+      let content = readFileSync(indexSrcPath, 'utf-8');
+      content = content.replace(/from\s+['"]\.\/aura-cursor['"]/g, "from './aura-cursor'");
+      content = content.replace(/from\s+['"]\.\/react['"]/g, "from './react'");
+      writeFileSync(indexDestPath, content);
+    }
+
     const reactSrcPath = join(process.cwd(), 'dist/src/react.d.ts');
     const reactDestPath = join(process.cwd(), 'dist/react.d.ts');
     if (existsSync(reactSrcPath)) {
       let content = readFileSync(reactSrcPath, 'utf-8');
-      content = content.replace(/from\s+['"]\.\/aura-cursor['"]/g, "from 'aura-cursor'");
+      content = content.replace(/from\s+['"]\.\/aura-cursor['"]/g, "from './aura-cursor'");
       writeFileSync(reactDestPath, content);
     }
 
@@ -62,7 +78,8 @@ export default [
           }
         }
       }),
-      terser()
+      terser(),
+      moveDeclarationFilesPlugin()
     ]
   },
   {

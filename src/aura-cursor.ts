@@ -79,6 +79,12 @@ export interface AuraCursorOptions {
    * @default undefined (uses primary color)
    */
   cursorDotColor?: string;
+  /**
+   * Color when hovering over interactive elements
+   * If not provided, uses the primary color or pointer color
+   * @default undefined (uses primary color or pointer color)
+   */
+  hoverColor?: string;
 }
 
 export class AuraCursor {
@@ -98,12 +104,16 @@ export class AuraCursor {
   private isActive = false;
   private isPointer = false;
   private isHoveringInteractive = false;
-  private options: Required<Omit<AuraCursorOptions, 'pointer' | 'cursorDotColor'>> & { 
+  private isOnInteractiveElement = false;
+  private isMouseInWindow = true;
+  private options: Required<Omit<AuraCursorOptions, 'pointer' | 'cursorDotColor' | 'hoverColor'>> & { 
     cursorDotColor?: string;
+    hoverColor?: string;
     pointer?: AuraCursorPointerOptions;
   };
-  private baseOptions: Required<Omit<AuraCursorOptions, 'pointer' | 'cursorDotColor'>> & {
+  private baseOptions: Required<Omit<AuraCursorOptions, 'pointer' | 'cursorDotColor' | 'hoverColor'>> & {
     cursorDotColor?: string;
+    hoverColor?: string;
   };
   private pointerElementsCache: WeakMap<HTMLElement, boolean> = new WeakMap();
 
@@ -119,6 +129,7 @@ export class AuraCursor {
       outlineMode: options.outlineMode ?? false,
       outlineWidth: options.outlineWidth ?? 2,
       cursorDotColor: options.cursorDotColor,
+      hoverColor: options.hoverColor,
     };
     this.options = {
       ...this.baseOptions,
@@ -202,6 +213,12 @@ export class AuraCursor {
     if (options.cursorDotColor !== undefined) {
       this.baseOptions.cursorDotColor = options.cursorDotColor;
       if (this.isActive && this.options.outlineMode) {
+        this.applyStyles();
+      }
+    }
+    if (options.hoverColor !== undefined) {
+      this.baseOptions.hoverColor = options.hoverColor;
+      if (this.isActive) {
         this.applyStyles();
       }
     }
@@ -294,9 +311,14 @@ export class AuraCursor {
       ? this.options.pointer.size 
       : this.baseOptions.size;
     
-    const color = this.isPointer && this.options.pointer?.color 
-      ? this.options.pointer.color 
-      : this.baseOptions.color;
+    let color = this.baseOptions.color;
+    if (this.isHoveringInteractive || this.isPointer) {
+      if (this.baseOptions.hoverColor) {
+        color = this.baseOptions.hoverColor;
+      } else if (this.isPointer && this.options.pointer?.color) {
+        color = this.options.pointer.color;
+      }
+    }
     
     const opacity = this.isPointer && this.options.pointer?.opacity !== undefined
       ? this.options.pointer.opacity 
@@ -331,7 +353,10 @@ export class AuraCursor {
       this.cursorElement.style.zIndex = '9999';
       
       if (this.cursorDot) {
-        const dotColor = this.baseOptions.cursorDotColor || this.baseOptions.color;
+        let dotColor = this.baseOptions.cursorDotColor || this.baseOptions.color;
+        if ((this.isHoveringInteractive || this.isPointer) && this.baseOptions.hoverColor) {
+          dotColor = this.baseOptions.hoverColor;
+        }
         const primaryOpacity = this.baseOptions.opacity;
         const dotSize = (this.isPointer || this.isHoveringInteractive) ? '6px' : '4px';
         
@@ -545,23 +570,92 @@ export class AuraCursor {
 
 
   /**
+   * Handles mouse leaving the window/document area
+   */
+  private handleMouseLeave = (e: MouseEvent): void => {
+    if (!e.relatedTarget || (e.relatedTarget as Node).nodeName === 'HTML') {
+      this.isMouseInWindow = false;
+      this.hideCursor();
+    }
+  };
+
+  /**
+   * Handles mouse entering the window/document area
+   */
+  private handleMouseEnter = (): void => {
+    this.isMouseInWindow = true;
+    if (this.cursorElement) {
+      this.applyStyles();
+    }
+  };
+
+  /**
+   * Handles window blur (when window loses focus, e.g., mouse goes to address bar)
+   */
+  private handleWindowBlur = (): void => {
+    this.isMouseInWindow = false;
+    this.hideCursor();
+  };
+
+  /**
+   * Handles window focus (when window gains focus)
+   */
+  private handleWindowFocus = (): void => {
+    this.isMouseInWindow = true;
+    if (this.cursorElement) {
+      this.applyStyles();
+    }
+  };
+
+  /**
+   * Hides the cursor
+   */
+  private hideCursor(): void {
+    if (this.cursorElement) {
+      this.cursorElement.style.opacity = '0';
+    }
+    if (this.cursorDot) {
+      this.cursorDot.style.opacity = '0';
+    }
+    if (this.centerDot) {
+      this.centerDot.style.opacity = '0';
+    }
+  }
+
+  /**
    * Handles mouse movement
    */
   private handleMouseMove = (e: MouseEvent): void => {
+    if (!this.isMouseInWindow) {
+      return;
+    }
+
     const target = e.target as HTMLElement;
+    const isInteractive = this.isInteractiveElement(target);
+    
+    const wasOnInteractive = this.isOnInteractiveElement;
+    this.isOnInteractiveElement = isInteractive;
     
     if (this.options.interactiveOnly) {
-      if (!this.isInteractiveElement(target)) {
+      if (!isInteractive) {
+        if (wasOnInteractive && this.cursorElement) {
+          this.hideCursor();
+        }
         return;
+      } else {
+        if (!wasOnInteractive && this.cursorElement) {
+          this.applyStyles();
+        }
+      }
+    } else {
+      if (this.cursorElement && this.cursorElement.style.opacity === '0') {
+        this.applyStyles();
       }
     }
 
-    const isInteractive = this.isInteractiveElement(target);
     if (this.isHoveringInteractive !== isInteractive) {
       this.isHoveringInteractive = isInteractive;
-      if (this.options.outlineMode) {
-        this.applyStyles();
-      }
+      this.applyStyles();
     }
 
     if (this.options.pointer) {
@@ -594,6 +688,10 @@ export class AuraCursor {
    */
   private attachEventListeners(): void {
     window.addEventListener('mousemove', this.handleMouseMove);
+    document.addEventListener('mouseleave', this.handleMouseLeave);
+    document.addEventListener('mouseenter', this.handleMouseEnter);
+    window.addEventListener('blur', this.handleWindowBlur);
+    window.addEventListener('focus', this.handleWindowFocus);
   }
 
   /**
@@ -601,6 +699,10 @@ export class AuraCursor {
    */
   private removeEventListeners(): void {
     window.removeEventListener('mousemove', this.handleMouseMove);
+    document.removeEventListener('mouseleave', this.handleMouseLeave);
+    document.removeEventListener('mouseenter', this.handleMouseEnter);
+    window.removeEventListener('blur', this.handleWindowBlur);
+    window.removeEventListener('focus', this.handleWindowFocus);
   }
 
   /**

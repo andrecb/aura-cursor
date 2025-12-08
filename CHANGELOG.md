@@ -7,7 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.1.0] - 2025-01-XX
+## [1.2.0] - 2025-12-07
+
+### Added
+- `hoverColor` option to set custom color when hovering over interactive elements
+- Automatic cursor hiding when mouse leaves the browser window (e.g., address bar, outside viewport)
+- Full TypeScript interface exports (`AuraCursorOptions`, `AuraCursorPointerOptions`, `AuraCursorProps`) for better type compatibility
+- Improved cursor visibility management in `interactiveOnly` mode - cursor hides when leaving interactive areas
+- Updated README with live demo link and comprehensive TypeScript documentation
+
+### Changed
+- Improved type resolution for React components - fixed import paths in declaration files
+- Enhanced cursor behavior to automatically hide when window loses focus
+
+### Fixed
+- Fixed TypeScript type resolution issues when importing interfaces
+- Improved cursor visibility when switching between interactive and non-interactive elements
+
+## [1.1.0] - 2025-12-07
 
 ### Added
 - Outline mode redesigned: two separate circles - inner dot follows mouse instantly, outer circle follows with delay
@@ -64,7 +81,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smooth animation with adaptive speed
 - Support for ESM, CommonJS, and UMD formats
 
-[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/andrecb/aura-cursor/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/andrecb/aura-cursor/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/andrecb/aura-cursor/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/andrecb/aura-cursor/compare/v1.0.2...v1.0.3
