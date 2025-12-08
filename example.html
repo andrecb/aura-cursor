@@ -542,6 +542,21 @@
               />
               <span class="value-display" id="outlineWidthValue">2</span>
             </div>
+
+            <div class="control-group">
+              <label for="cursorDotColor">Center Dot Color</label>
+              <input type="color" id="cursorDotColor" value="#000000" />
+              <p
+                style="
+                  font-size: 0.85rem;
+                  opacity: 0.8;
+                  margin-top: 5px;
+                  color: #cfcfcf;
+                "
+              >
+                Color for the center dot in outline mode
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -640,7 +655,8 @@
           <p><code>&nbsp;&nbsp;color: '#000000',</code></p>
           <p><code>&nbsp;&nbsp;opacity: 0.5,</code></p>
           <p><code>&nbsp;&nbsp;outlineMode: true,</code></p>
-          <p><code>&nbsp;&nbsp;outlineWidth: 2</code></p>
+          <p><code>&nbsp;&nbsp;outlineWidth: 2,</code></p>
+          <p><code>&nbsp;&nbsp;cursorDotColor: '#ff0000'</code></p>
           <p><code>});</code></p>
           <p><code>cursor.init();</code></p>
           <p><strong>Update options:</strong></p>
@@ -678,6 +694,7 @@
     const outlineModeInput = document.getElementById('outlineMode');
     const outlineWidthInput = document.getElementById('outlineWidth');
     const outlineWidthValue = document.getElementById('outlineWidthValue');
+    const cursorDotColorInput = document.getElementById('cursorDotColor');
 
       // Value displays
       const sizeValue = document.getElementById('sizeValue');
@@ -755,6 +772,22 @@
       });
     }
 
+    if (cursorDotColorInput) {
+      cursorDotColorInput.addEventListener('input', (e) => {
+        if (cursor) {
+          cursor.updateOptions({ cursorDotColor: e.target.value });
+        }
+      });
+    }
+
+    if (cursorDotColorInput) {
+      cursorDotColorInput.addEventListener('input', (e) => {
+        if (cursor) {
+          cursor.updateOptions({ cursorDotColor: e.target.value });
+        }
+      });
+    }
+
       function updatePointerOptions() {
         if (cursor && enablePointerInput.checked) {
           cursor.updateOptions({
@@ -800,6 +833,7 @@
         interactiveOnly: interactiveOnlyInput.checked,
         outlineMode: outlineModeInput.checked,
         outlineWidth: outlineWidthInput ? parseInt(outlineWidthInput.value) : 2,
+        cursorDotColor: cursorDotColorInput ? cursorDotColorInput.value : undefined,
       };
 
         if (enablePointerInput.checked) {

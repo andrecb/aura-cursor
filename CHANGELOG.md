@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2025-01-XX
+
+### Added
+- Outline mode redesigned: two separate circles - inner dot follows mouse instantly, outer circle follows with delay
+- `cursorDotColor` option to customize the center dot color in outline mode
+- Inner dot in outline mode increases size on hover over interactive elements
+- Inner dot and outer circle border change to hover color when over interactive elements
+
+### Changed
+- Outline mode behavior: inner dot always follows mouse instantly, outer circle (border only) follows with delay
+- Improved outline mode visual: cleaner separation between inner dot and outer border circle
+
 ## [1.0.4] - 2025-12-07
 
 ### Fixed
@@ -52,7 +64,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smooth animation with adaptive speed
 - Support for ESM, CommonJS, and UMD formats
 
-[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/andrecb/aura-cursor/compare/v1.0.4...v1.1.0
 [1.0.4]: https://github.com/andrecb/aura-cursor/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/andrecb/aura-cursor/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/andrecb/aura-cursor/compare/v1.0.1...v1.0.2
