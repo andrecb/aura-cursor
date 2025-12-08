@@ -41,12 +41,19 @@
   },
   "keywords": [
     "cursor",
+    "custom-cursor",
+    "cursor-effect",
+    "interactive-cursor",
+    "mouse-cursor",
+    "web-cursor",
     "aura",
     "aura-cursor",
-    "aura-cursor-ai",
-    "aura-cursor-ai-tool",
-    "aura-cursor-ai-tool-for-website",
-    "aura-cursor-ai-tool-for-website-development"
+    "typescript",
+    "react",
+    "vanilla-js",
+    "ui",
+    "animation",
+    "hover-effect"
   ],
   "author": "André Barros <contato@andrebarros.dev>",
   "license": "MIT",
