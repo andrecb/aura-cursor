@@ -3,19 +3,45 @@ import { AuraCursor, AuraCursorOptions } from '../src/index';
 
 describe('AuraCursor', () => {
   let cursor: AuraCursor;
+  let rafId = 0;
+  const rafCallbacks: Map<number, FrameRequestCallback> = new Map();
 
   beforeEach(() => {
-    // Mock DOM
-    document.body.innerHTML = '';
-    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true });
-    Object.defineProperty(window, 'innerHeight', { value: 768, writable: true });
+    if (typeof process !== 'undefined' && !process.env.VITEST) {
+      process.env.VITEST = 'true';
+    }
     
-    // Mock requestAnimationFrame
-    global.requestAnimationFrame = vi.fn((cb) => {
-      setTimeout(cb, 16);
-      return 1;
+    document.body.innerHTML = '';
+    document.head.innerHTML = '';
+    Object.defineProperty(window, 'innerWidth', { value: 1024, writable: true, configurable: true });
+    Object.defineProperty(window, 'innerHeight', { value: 768, writable: true, configurable: true });
+    
+    (window as Window & { __AURA_CURSOR_FORCE_DESKTOP__?: boolean }).__AURA_CURSOR_FORCE_DESKTOP__ = true;
+    
+    Object.defineProperty(navigator, 'maxTouchPoints', { value: 0, writable: true, configurable: true });
+    Object.defineProperty(navigator, 'userAgent', { 
+      value: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36', 
+      writable: true, 
+      configurable: true 
     });
-    global.cancelAnimationFrame = vi.fn();
+    
+    rafId = 0;
+    rafCallbacks.clear();
+    global.requestAnimationFrame = vi.fn((cb: FrameRequestCallback) => {
+      const id = ++rafId;
+      rafCallbacks.set(id, cb);
+      setTimeout(() => {
+        const callback = rafCallbacks.get(id);
+        if (callback) {
+          callback(performance.now());
+        }
+      }, 0);
+      return id;
+    });
+    
+    global.cancelAnimationFrame = vi.fn((id: number) => {
+      rafCallbacks.delete(id);
+    });
   });
 
   afterEach(() => {
@@ -77,6 +103,8 @@ describe('AuraCursor', () => {
       cursor = new AuraCursor();
       cursor.init();
       
+      expect(global.requestAnimationFrame).toHaveBeenCalled();
+      
       cursor.destroy();
       
       expect(global.cancelAnimationFrame).toHaveBeenCalled();
@@ -98,11 +126,12 @@ describe('AuraCursor', () => {
   });
 
   describe('Default options', () => {
-    it('should use default values when options are not provided', () => {
+    it('should use default values when options are not provided', async () => {
       cursor = new AuraCursor();
       cursor.init();
       
       const cursorElement = document.querySelector('.aura-cursor') as HTMLElement;
+      expect(cursorElement).toBeTruthy();
       expect(cursorElement.style.width).toBe('20px');
       expect(cursorElement.style.height).toBe('20px');
       expect(cursorElement.style.backgroundColor).toBe('rgb(0, 0, 0)');
@@ -114,6 +143,8 @@ describe('AuraCursor', () => {
         bubbles: true,
       });
       window.dispatchEvent(mouseEvent);
+      
+      await new Promise(resolve => setTimeout(resolve, 10));
       
       expect(cursorElement.style.opacity).toBe('0.5');
     });

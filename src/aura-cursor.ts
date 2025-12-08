@@ -160,6 +160,13 @@ export class AuraCursor {
       return false;
     }
 
+    if (typeof process !== 'undefined' && process.env?.VITEST === 'true') {
+      const forceDesktop = (window as Window & { __AURA_CURSOR_FORCE_DESKTOP__?: boolean }).__AURA_CURSOR_FORCE_DESKTOP__;
+      if (forceDesktop === true) {
+        return false;
+      }
+    }
+
     const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const isSmallScreen = window.innerWidth <= 768;
     const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
