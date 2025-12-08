@@ -443,6 +443,29 @@
             </div>
 
             <div class="control-group">
+              <label for="centerDotSize">Center Dot Size (px)</label>
+              <input
+                type="range"
+                id="centerDotSize"
+                min="1"
+                max="20"
+                step="1"
+                value="3"
+              />
+              <span class="value-display" id="centerDotSizeValue">3</span>
+              <p
+                style="
+                  font-size: 0.85rem;
+                  opacity: 0.8;
+                  margin-top: 5px;
+                  color: #cfcfcf;
+                "
+              >
+                Size of the center dot when hideDefaultCursor is enabled
+              </p>
+            </div>
+
+            <div class="control-group">
               <label for="interactiveOnly">
                 <input type="checkbox" id="interactiveOnly" />
                 Interactive Only
@@ -452,24 +475,12 @@
         </div>
 
         <div class="controls-section">
-          <h3>Pointer Hover Options</h3>
+          <h3>Hover Effect Options</h3>
           <p style="margin-bottom: 15px; opacity: 0.9">
             Configure how the cursor changes when hovering over clickable
             elements (links, buttons, etc.)
           </p>
           <div class="controls-grid">
-            <div class="control-group">
-              <label for="pointerSize">Pointer Size (px)</label>
-              <input
-                type="range"
-                id="pointerSize"
-                min="10"
-                max="150"
-                value="30"
-              />
-              <span class="value-display" id="pointerSizeValue">30px</span>
-            </div>
-
             <div class="control-group">
               <label for="pointerOpacity">Pointer Opacity</label>
               <input
@@ -500,14 +511,17 @@
               <label for="pointerColor">Pointer Color</label>
               <input type="color" id="pointerColor" value="#ff6b6b" />
             </div>
-
-            <div class="control-group">
-              <label for="enablePointer">
-                <input type="checkbox" id="enablePointer" checked />
-                Enable Pointer Effects
-              </label>
-            </div>
           </div>
+          <p
+            style="
+              font-size: 0.85rem;
+              opacity: 0.8;
+              margin-top: 15px;
+              color: #cfcfcf;
+            "
+          >
+            Hover effects are automatically enabled when these options are configured.
+          </p>
         </div>
 
         <div class="controls-section">
@@ -544,8 +558,8 @@
             </div>
 
             <div class="control-group">
-              <label for="cursorDotColor">Center Dot Color</label>
-              <input type="color" id="cursorDotColor" value="#000000" />
+              <label for="centerDotColor">Center Dot Color</label>
+              <input type="color" id="centerDotColor" value="#000000" />
               <p
                 style="
                   font-size: 0.85rem;
@@ -555,6 +569,21 @@
                 "
               >
                 Color for the center dot in outline mode
+              </p>
+            </div>
+
+            <div class="control-group">
+              <label for="centerDotHoverColor">Center Dot Hover Color</label>
+              <input type="color" id="centerDotHoverColor" value="#ff4fa2" />
+              <p
+                style="
+                  font-size: 0.85rem;
+                  opacity: 0.8;
+                  margin-top: 5px;
+                  color: #cfcfcf;
+                "
+              >
+                Color for the center dot when hovering over interactive elements
               </p>
             </div>
           </div>
@@ -569,7 +598,7 @@
       </div>
 
       <div class="demo-section">
-        <h2>Pointer Interaction Demo</h2>
+        <h2>Hover Effect Interaction Demo</h2>
         <div class="pointer-demo">
           <p>
             <strong>Hover over these elements to see the cursor change!</strong>
@@ -637,12 +666,11 @@
             >
           </p>
           <p><code>cursor.init();</code></p>
-          <p><strong>With pointer options:</strong></p>
+          <p><strong>With hover effect options:</strong></p>
           <p><code>const cursor = new AuraCursor({</code></p>
           <p><code>&nbsp;&nbsp;size: 20,</code></p>
           <p><code>&nbsp;&nbsp;color: '#000000',</code></p>
-          <p><code>&nbsp;&nbsp;pointer: {</code></p>
-          <p><code>&nbsp;&nbsp;&nbsp;&nbsp;size: 30,</code></p>
+          <p><code>&nbsp;&nbsp;hoverEffect: {</code></p>
           <p><code>&nbsp;&nbsp;&nbsp;&nbsp;color: '#ff6b6b',</code></p>
           <p><code>&nbsp;&nbsp;&nbsp;&nbsp;opacity: 0.8,</code></p>
           <p><code>&nbsp;&nbsp;&nbsp;&nbsp;scale: 1.5</code></p>
@@ -656,7 +684,9 @@
           <p><code>&nbsp;&nbsp;opacity: 0.5,</code></p>
           <p><code>&nbsp;&nbsp;outlineMode: true,</code></p>
           <p><code>&nbsp;&nbsp;outlineWidth: 2,</code></p>
-          <p><code>&nbsp;&nbsp;cursorDotColor: '#ff0000'</code></p>
+          <p><code>&nbsp;&nbsp;centerDotColor: '#ff0000',</code></p>
+          <p><code>&nbsp;&nbsp;centerDotHoverColor: '#ff4fa2',</code></p>
+          <p><code>&nbsp;&nbsp;centerDotSize: 5</code></p>
           <p><code>});</code></p>
           <p><code>cursor.init();</code></p>
           <p><strong>Update options:</strong></p>
@@ -684,23 +714,23 @@
       const destroyBtn = document.getElementById('destroyBtn');
 
       // Pointer controls
-      const pointerSizeInput = document.getElementById('pointerSize');
       const pointerOpacityInput = document.getElementById('pointerOpacity');
       const pointerScaleInput = document.getElementById('pointerScale');
       const pointerColorInput = document.getElementById('pointerColor');
-      const enablePointerInput = document.getElementById('enablePointer');
 
     // Variation controls
     const outlineModeInput = document.getElementById('outlineMode');
     const outlineWidthInput = document.getElementById('outlineWidth');
     const outlineWidthValue = document.getElementById('outlineWidthValue');
-    const cursorDotColorInput = document.getElementById('cursorDotColor');
+    const centerDotColorInput = document.getElementById('centerDotColor');
+    const centerDotHoverColorInput = document.getElementById('centerDotHoverColor');
+    const centerDotSizeInput = document.getElementById('centerDotSize');
+    const centerDotSizeValue = document.getElementById('centerDotSizeValue');
 
       // Value displays
       const sizeValue = document.getElementById('sizeValue');
       const opacityValue = document.getElementById('opacityValue');
       const speedValue = document.getElementById('speedValue');
-      const pointerSizeValue = document.getElementById('pointerSizeValue');
       const pointerOpacityValue = document.getElementById(
         'pointerOpacityValue'
       );
@@ -734,11 +764,6 @@
         }
       });
 
-      pointerSizeInput.addEventListener('input', (e) => {
-        pointerSizeValue.textContent = `${e.target.value}px`;
-        updatePointerOptions();
-      });
-
       pointerOpacityInput.addEventListener('input', (e) => {
         pointerOpacityValue.textContent = e.target.value;
         updatePointerOptions();
@@ -750,10 +775,6 @@
       });
 
       pointerColorInput.addEventListener('input', (e) => {
-        updatePointerOptions();
-      });
-
-      enablePointerInput.addEventListener('change', (e) => {
         updatePointerOptions();
       });
 
@@ -772,35 +793,39 @@
       });
     }
 
-    if (cursorDotColorInput) {
-      cursorDotColorInput.addEventListener('input', (e) => {
+    if (centerDotColorInput) {
+      centerDotColorInput.addEventListener('input', (e) => {
         if (cursor) {
-          cursor.updateOptions({ cursorDotColor: e.target.value });
+          cursor.updateOptions({ centerDotColor: e.target.value });
         }
       });
     }
 
-    if (cursorDotColorInput) {
-      cursorDotColorInput.addEventListener('input', (e) => {
+    if (centerDotHoverColorInput) {
+      centerDotHoverColorInput.addEventListener('input', (e) => {
         if (cursor) {
-          cursor.updateOptions({ cursorDotColor: e.target.value });
+          cursor.updateOptions({ centerDotHoverColor: e.target.value });
+        }
+      });
+    }
+
+    if (centerDotSizeInput && centerDotSizeValue) {
+      centerDotSizeInput.addEventListener('input', (e) => {
+        centerDotSizeValue.textContent = e.target.value;
+        if (cursor) {
+          cursor.updateOptions({ centerDotSize: parseInt(e.target.value) });
         }
       });
     }
 
       function updatePointerOptions() {
-        if (cursor && enablePointerInput.checked) {
+        if (cursor) {
           cursor.updateOptions({
-            pointer: {
-              size: parseInt(pointerSizeInput.value),
+            hoverEffect: {
               color: pointerColorInput.value,
               opacity: parseFloat(pointerOpacityInput.value),
               scale: parseFloat(pointerScaleInput.value),
             },
-          });
-        } else if (cursor) {
-          cursor.updateOptions({
-            pointer: undefined,
           });
         }
       }
@@ -833,17 +858,16 @@
         interactiveOnly: interactiveOnlyInput.checked,
         outlineMode: outlineModeInput.checked,
         outlineWidth: outlineWidthInput ? parseInt(outlineWidthInput.value) : 2,
-        cursorDotColor: cursorDotColorInput ? cursorDotColorInput.value : undefined,
+        centerDotColor: centerDotColorInput ? centerDotColorInput.value : undefined,
+        centerDotHoverColor: centerDotHoverColorInput ? centerDotHoverColorInput.value : undefined,
+        centerDotSize: centerDotSizeInput ? parseInt(centerDotSizeInput.value) : 3,
       };
 
-        if (enablePointerInput.checked) {
-          options.pointer = {
-            size: parseInt(pointerSizeInput.value),
-            color: pointerColorInput.value,
-            opacity: parseFloat(pointerOpacityInput.value),
-            scale: parseFloat(pointerScaleInput.value),
-          };
-        }
+        options.hoverEffect = {
+          color: pointerColorInput.value,
+          opacity: parseFloat(pointerOpacityInput.value),
+          scale: parseFloat(pointerScaleInput.value),
+        };
 
         cursor = new AuraCursor.AuraCursor(options);
         cursor.init();

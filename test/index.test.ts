@@ -106,6 +106,15 @@ describe('AuraCursor', () => {
       expect(cursorElement.style.width).toBe('20px');
       expect(cursorElement.style.height).toBe('20px');
       expect(cursorElement.style.backgroundColor).toBe('rgb(0, 0, 0)');
+      expect(cursorElement.style.opacity).toBe('0');
+      
+      const mouseEvent = new MouseEvent('mousemove', {
+        clientX: 100,
+        clientY: 100,
+        bubbles: true,
+      });
+      window.dispatchEvent(mouseEvent);
+      
       expect(cursorElement.style.opacity).toBe('0.5');
     });
   });

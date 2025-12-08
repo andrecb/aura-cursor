@@ -12,13 +12,13 @@
 
 - 🎨 **Customizable Design** - Size, color, opacity, and speed controls
 - 🖱️ **Smart Detection** - Automatically detects interactive elements (links, buttons, etc.)
-- 🎯 **Pointer Effects** - Different styles when hovering over clickable elements
+- 🎯 **Hover Effects** - Different styles when hovering over clickable elements
 - ⚡ **Smooth Animation** - Fluid cursor movement with configurable speed
 - 🎭 **Flexible Options** - Hide default cursor, interactive-only mode, outline mode, and more
 - 🌈 **Hover Colors** - Custom colors when hovering over interactive elements
 - 📦 **Lightweight** - Small bundle size with zero dependencies
 - 🔧 **TypeScript** - Full TypeScript support with type definitions
-- 👁️ **Center Dot Indicator** - Small dot in the center when default cursor is hidden
+- 👁️ **Center Dot Indicator** - Small dot in the center when default cursor is hidden or in outline mode, with customizable size and hover colors
 - 🪟 **Smart Visibility** - Automatically hides when mouse leaves the browser window
 
 ## Installation
@@ -158,20 +158,21 @@ function App() {
 | `interactiveOnly` | `boolean` | `false` | Show cursor only on interactive elements |
 | `outlineMode` | `boolean` | `false` | Show cursor as outline (border only) with center dot |
 | `outlineWidth` | `number` | `2` | Border width in pixels when outline mode is enabled |
-| `cursorDotColor` | `string` | `undefined` | Color for the center dot in outline mode (uses primary color if not provided) |
-| `hoverColor` | `string` | `undefined` | Color when hovering over interactive elements (uses primary color or pointer color if not provided) |
-| `pointer` | `AuraCursorPointerOptions` | `undefined` | Options for pointer hover effects |
+| `centerDotColor` | `string` | `undefined` | Color for the center dot in outline mode or when hideDefaultCursor is enabled (uses primary color if not provided) |
+| `hoverColor` | `string` | `undefined` | Color when hovering over interactive elements (uses primary color or hoverEffect color if not provided) |
+| `centerDotSize` | `number` | `3` | Size of the center dot in pixels when hideDefaultCursor is enabled or in outline mode |
+| `centerDotHoverColor` | `string` | `undefined` | Color for the center dot when hovering over interactive elements (uses centerDotColor or primary color if not provided) |
+| `hoverEffect` | `AuraCursorHoverEffectOptions` | `undefined` | Options for hover effects when cursor is over interactive elements |
 
-### AuraCursorPointerOptions
+### AuraCursorHoverEffectOptions
 
 Configure how the cursor changes when hovering over clickable elements:
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `size` | `number` | `undefined` | Size when hovering (uses default if not set) |
-| `color` | `string` | `undefined` | Color when hovering (uses default if not set) |
+| `color` | `string` | `undefined` | Color when hovering (uses default color or hoverColor if not set) |
 | `opacity` | `number` | `undefined` | Opacity when hovering (uses default if not set) |
-| `scale` | `number` | `1.5` | Scale multiplier when hovering |
+| `scale` | `number` | `1.5` | Scale multiplier when hovering (multiplies the base size, e.g., 1.5 = 150% of base size) |
 
 ## Examples
 
@@ -190,7 +191,7 @@ const cursor = new AuraCursor({
 cursor.init();
 ```
 
-### With Pointer Effects
+### With Hover Effects
 
 ```typescript
 import { AuraCursor } from 'aura-cursor';
@@ -199,8 +200,7 @@ const cursor = new AuraCursor({
   size: 20,
   color: '#000000',
   opacity: 0.5,
-  pointer: {
-    size: 30,
+  hoverEffect: {
     color: '#ff6b6b',
     opacity: 0.8,
     scale: 1.5
@@ -219,13 +219,16 @@ const cursor = new AuraCursor({
   size: 25,
   color: '#ffffff',
   opacity: 0.7,
-  hideDefaultCursor: true
+  hideDefaultCursor: true,
+  centerDotSize: 5,
+  centerDotColor: '#ff0000',
+  centerDotHoverColor: '#00ff00'
 });
 
 cursor.init();
 ```
 
-When `hideDefaultCursor` is enabled, a small center dot will appear to indicate the exact cursor position, following the mouse instantly while the outer circle follows with the configured speed.
+When `hideDefaultCursor` is enabled, a small center dot will appear to indicate the exact cursor position, following the mouse instantly while the outer circle follows with the configured speed. You can customize the center dot size using `centerDotSize` (default: 3px) and its color using `centerDotColor`. When hovering over interactive elements, the center dot will use `centerDotHoverColor` if provided.
 
 ### Interactive Only Mode
 
@@ -254,13 +257,15 @@ const cursor = new AuraCursor({
   opacity: 0.5,
   outlineMode: true,
   outlineWidth: 2,
-  cursorDotColor: '#ff0000'
+  centerDotColor: '#ff0000',
+  centerDotSize: 5,
+  centerDotHoverColor: '#00ff00'
 });
 
 cursor.init();
 ```
 
-This mode displays the cursor as a border-only circle with a center dot, instead of a filled circle. The inner dot follows the mouse instantly, while the outer circle follows with a smooth delay. You can customize the border width using the `outlineWidth` option (default: 2px) and the center dot color using `cursorDotColor`.
+This mode displays the cursor as a border-only circle with a center dot, instead of a filled circle. The inner dot follows the mouse instantly, while the outer circle follows with a smooth delay. You can customize the border width using the `outlineWidth` option (default: 2px), the center dot color using `centerDotColor`, and the center dot size using `centerDotSize` (default: 3px). When hovering over interactive elements, the center dot will use `centerDotHoverColor` if provided.
 
 ### With Hover Color
 
@@ -271,8 +276,7 @@ const cursor = new AuraCursor({
   size: 20,
   color: '#000000',
   hoverColor: '#ff6b6b',
-  pointer: {
-    size: 30,
+  hoverEffect: {
     scale: 1.5
   }
 });
@@ -280,7 +284,7 @@ const cursor = new AuraCursor({
 cursor.init();
 ```
 
-The `hoverColor` option allows you to set a specific color that will be used when hovering over interactive elements. This color takes precedence over the `pointer.color` option.
+The `hoverColor` option allows you to set a specific color that will be used when hovering over interactive elements. This color takes precedence over the `hoverEffect.color` option.
 
 ### Update Options Dynamically
 
@@ -347,7 +351,7 @@ The library is written in TypeScript and provides full type definitions. All int
 ```typescript
 import type { 
   AuraCursorOptions, 
-  AuraCursorPointerOptions, 
+  AuraCursorHoverEffectOptions, 
   AuraCursorProps 
 } from 'aura-cursor';
 

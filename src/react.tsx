@@ -36,12 +36,13 @@ export function useAuraCursor(options?: AuraCursorOptions) {
     options?.interactiveOnly,
     options?.outlineMode,
     options?.outlineWidth,
-    options?.cursorDotColor,
+    options?.centerDotColor,
     options?.hoverColor,
-    options?.pointer?.size,
-    options?.pointer?.color,
-    options?.pointer?.opacity,
-    options?.pointer?.scale,
+    options?.centerDotSize,
+    options?.centerDotHoverColor,
+    options?.hoverEffect?.color,
+    options?.hoverEffect?.opacity,
+    options?.hoverEffect?.scale,
   ]);
 
   useEffect(() => {
@@ -138,12 +139,13 @@ export function AuraCursor({ enabled = true, ...options }: AuraCursorProps): nul
     options.interactiveOnly,
     options.outlineMode,
     options.outlineWidth,
-    options.cursorDotColor,
+    options.centerDotColor,
     options.hoverColor,
-    options.pointer?.size,
-    options.pointer?.color,
-    options.pointer?.opacity,
-    options.pointer?.scale,
+    options.centerDotSize,
+    options.centerDotHoverColor,
+    options.hoverEffect?.color,
+    options.hoverEffect?.opacity,
+    options.hoverEffect?.scale,
   ]);
 
   // Initialize or destroy cursor based on enabled state

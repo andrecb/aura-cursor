@@ -1,21 +1,17 @@
-export interface AuraCursorPointerOptions {
+export interface AuraCursorHoverEffectOptions {
   /**
-   * Circle size in pixels when hovering over pointer elements
-   * @default undefined (uses default size)
-   */
-  size?: number;
-  /**
-   * Circle color when hovering over pointer elements
-   * @default undefined (uses default color)
+   * Circle color when hovering over interactive elements
+   * @default undefined (uses default color or hoverColor)
    */
   color?: string;
   /**
-   * Circle opacity when hovering over pointer elements (0 to 1)
+   * Circle opacity when hovering over interactive elements (0 to 1)
    * @default undefined (uses default opacity)
    */
   opacity?: number;
   /**
-   * Scale multiplier when hovering over pointer elements
+   * Scale multiplier when hovering over interactive elements
+   * Multiplies the base size (e.g., 1.5 = 150% of base size)
    * @default 1.5
    */
   scale?: number;
@@ -59,10 +55,10 @@ export interface AuraCursorOptions {
    */
   interactiveOnly?: boolean;
   /**
-   * Options for when cursor is over pointer elements
+   * Options for hover effects when cursor is over interactive elements (links, buttons, etc)
    * @default undefined (no special styling)
    */
-  pointer?: AuraCursorPointerOptions;
+  hoverEffect?: AuraCursorHoverEffectOptions;
   /**
    * Show cursor as outline (border only) with center dot
    * @default false
@@ -74,17 +70,29 @@ export interface AuraCursorOptions {
    */
   outlineWidth?: number;
   /**
-   * Color for the center dot in outline mode
+   * Color for the center dot in outline mode or when hideDefaultCursor is enabled
    * If not provided, uses the primary color
    * @default undefined (uses primary color)
    */
-  cursorDotColor?: string;
+  centerDotColor?: string;
   /**
    * Color when hovering over interactive elements
-   * If not provided, uses the primary color or pointer color
-   * @default undefined (uses primary color or pointer color)
+   * If not provided, uses the primary color or hoverEffect color
+   * @default undefined (uses primary color or hoverEffect color)
    */
   hoverColor?: string;
+  /**
+   * Size of the center dot in pixels when hideDefaultCursor is enabled or in outline mode
+   * @default 3
+   */
+  centerDotSize?: number;
+  /**
+   * Color for the center dot when hovering over interactive elements
+   * Works in both outline mode and when hideDefaultCursor is enabled
+   * If not provided, uses centerDotColor or the primary color
+   * @default undefined (uses centerDotColor or primary color)
+   */
+  centerDotHoverColor?: string;
 }
 
 export class AuraCursor {
@@ -106,14 +114,18 @@ export class AuraCursor {
   private isHoveringInteractive = false;
   private isOnInteractiveElement = false;
   private isMouseInWindow = true;
-  private options: Required<Omit<AuraCursorOptions, 'pointer' | 'cursorDotColor' | 'hoverColor'>> & { 
-    cursorDotColor?: string;
+  private options: Required<Omit<AuraCursorOptions, 'hoverEffect' | 'centerDotColor' | 'hoverColor' | 'centerDotSize' | 'centerDotHoverColor'>> & { 
+    centerDotColor?: string;
     hoverColor?: string;
-    pointer?: AuraCursorPointerOptions;
+    centerDotSize?: number;
+    centerDotHoverColor?: string;
+    hoverEffect?: AuraCursorHoverEffectOptions;
   };
-  private baseOptions: Required<Omit<AuraCursorOptions, 'pointer' | 'cursorDotColor' | 'hoverColor'>> & {
-    cursorDotColor?: string;
+  private baseOptions: Required<Omit<AuraCursorOptions, 'hoverEffect' | 'centerDotColor' | 'hoverColor' | 'centerDotSize' | 'centerDotHoverColor'>> & {
+    centerDotColor?: string;
     hoverColor?: string;
+    centerDotSize?: number;
+    centerDotHoverColor?: string;
   };
   private pointerElementsCache: WeakMap<HTMLElement, boolean> = new WeakMap();
 
@@ -128,12 +140,14 @@ export class AuraCursor {
       interactiveOnly: options.interactiveOnly ?? false,
       outlineMode: options.outlineMode ?? false,
       outlineWidth: options.outlineWidth ?? 2,
-      cursorDotColor: options.cursorDotColor,
+      centerDotColor: options.centerDotColor,
       hoverColor: options.hoverColor,
+      centerDotSize: options.centerDotSize ?? 3,
+      centerDotHoverColor: options.centerDotHoverColor,
     };
     this.options = {
       ...this.baseOptions,
-      pointer: options.pointer,
+      hoverEffect: options.hoverEffect,
     };
   }
 
@@ -182,8 +196,8 @@ export class AuraCursor {
    * Updates the cursor options
    */
   public updateOptions(options: Partial<AuraCursorOptions>): void {
-    if (options.pointer !== undefined) {
-      this.options.pointer = options.pointer;
+    if (options.hoverEffect !== undefined) {
+      this.options.hoverEffect = options.hoverEffect;
     }
     
     const hideDefaultCursorChanged = options.hideDefaultCursor !== undefined && 
@@ -210,8 +224,8 @@ export class AuraCursor {
         this.applyStyles();
       }
     }
-    if (options.cursorDotColor !== undefined) {
-      this.baseOptions.cursorDotColor = options.cursorDotColor;
+    if (options.centerDotColor !== undefined) {
+      this.baseOptions.centerDotColor = options.centerDotColor;
       if (this.isActive && this.options.outlineMode) {
         this.applyStyles();
       }
@@ -222,15 +236,33 @@ export class AuraCursor {
         this.applyStyles();
       }
     }
+    if (options.centerDotSize !== undefined) {
+      this.baseOptions.centerDotSize = options.centerDotSize;
+      if (this.isActive && (this.options.hideDefaultCursor || this.options.outlineMode)) {
+        this.applyStyles();
+      }
+    }
+    if (options.centerDotHoverColor !== undefined) {
+      this.baseOptions.centerDotHoverColor = options.centerDotHoverColor;
+      if (this.isActive && this.options.hideDefaultCursor) {
+        this.applyStyles();
+      }
+    }
     
     this.options = {
       ...this.baseOptions,
-      pointer: this.options.pointer,
+      hoverEffect: this.options.hoverEffect,
     };
     
     if (hideDefaultCursorChanged) {
-      if (this.options.hideDefaultCursor) {
+      if (this.options.hideDefaultCursor && !this.options.outlineMode) {
         this.hideDefaultCursor();
+        const existingCenterDots = document.querySelectorAll('.aura-cursor-center-dot');
+        existingCenterDots.forEach((element) => {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        });
         if (!this.centerDot) {
           this.centerDot = document.createElement('div');
           this.centerDot.className = 'aura-cursor-center-dot';
@@ -239,6 +271,12 @@ export class AuraCursor {
         }
       } else {
         this.showDefaultCursor();
+        const existingCenterDots = document.querySelectorAll('.aura-cursor-center-dot');
+        existingCenterDots.forEach((element) => {
+          if (element.parentNode) {
+            element.parentNode.removeChild(element);
+          }
+        });
         if (this.centerDot && this.centerDot.parentNode) {
           this.centerDot.parentNode.removeChild(this.centerDot);
           this.centerDot = null;
@@ -247,16 +285,28 @@ export class AuraCursor {
     }
     
     if (options.outlineMode !== undefined && this.isActive) {
-      if (this.options.outlineMode && !this.cursorDot) {
-        this.cursorDot = document.createElement('div');
-        this.cursorDot.className = 'aura-cursor-dot';
-        document.body.appendChild(this.cursorDot);
-        this.applyStyles();
-      } else if (!this.options.outlineMode && this.cursorDot) {
-        if (this.cursorDot.parentNode) {
-          this.cursorDot.parentNode.removeChild(this.cursorDot);
+      if (this.options.outlineMode) {
+        if (!this.cursorDot) {
+          this.cursorDot = document.createElement('div');
+          this.cursorDot.className = 'aura-cursor-dot';
+          document.body.appendChild(this.cursorDot);
         }
-        this.cursorDot = null;
+        if (this.centerDot && this.centerDot.parentNode) {
+          this.centerDot.parentNode.removeChild(this.centerDot);
+          this.centerDot = null;
+        }
+        this.applyStyles();
+      } else {
+        if (this.cursorDot && this.cursorDot.parentNode) {
+          this.cursorDot.parentNode.removeChild(this.cursorDot);
+          this.cursorDot = null;
+        }
+        if (this.options.hideDefaultCursor && !this.centerDot) {
+          this.centerDot = document.createElement('div');
+          this.centerDot.className = 'aura-cursor-center-dot';
+          document.body.appendChild(this.centerDot);
+        }
+        this.applyStyles();
       }
     }
     
@@ -269,6 +319,13 @@ export class AuraCursor {
    * Creates the cursor DOM element
    */
   private createCursorElement(): void {
+    const existingCursors = document.querySelectorAll('.aura-cursor, .aura-cursor-dot, .aura-cursor-center-dot');
+    existingCursors.forEach((element) => {
+      if (element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+    });
+    
     this.cursorElement = document.createElement('div');
     this.cursorElement.className = `aura-cursor ${this.options.className}`.trim();
     
@@ -283,21 +340,47 @@ export class AuraCursor {
       this.applyStyles();
     }
     
-    if (this.options.hideDefaultCursor) {
-      this.centerDot = document.createElement('div');
-      this.centerDot.className = 'aura-cursor-center-dot';
-      document.body.appendChild(this.centerDot);
-      this.applyStyles();
+    if (this.options.hideDefaultCursor && !this.options.outlineMode) {
+      if (!this.centerDot) {
+        this.centerDot = document.createElement('div');
+        this.centerDot.className = 'aura-cursor-center-dot';
+        document.body.appendChild(this.centerDot);
+        this.applyStyles();
+      }
+    } else if (this.centerDot && this.centerDot.parentNode) {
+      this.centerDot.parentNode.removeChild(this.centerDot);
+      this.centerDot = null;
     }
     
-    this.currentX = window.innerWidth / 2;
-    this.currentY = window.innerHeight / 2;
-    this.targetX = this.currentX;
-    this.targetY = this.currentY;
-    this.centerDotX = this.currentX;
-    this.centerDotY = this.currentY;
-    this.outlineCircleX = this.currentX;
-    this.outlineCircleY = this.currentY;
+    let initialX = window.innerWidth / 2;
+    let initialY = window.innerHeight / 2;
+    
+    if (typeof document !== 'undefined') {
+      const doc = document as Document & { __auraCursorLastMouseEvent?: MouseEvent };
+      const lastMouseEvent = doc.__auraCursorLastMouseEvent;
+      if (lastMouseEvent && lastMouseEvent.clientX !== undefined && lastMouseEvent.clientY !== undefined) {
+        initialX = lastMouseEvent.clientX;
+        initialY = lastMouseEvent.clientY;
+      }
+    }
+    
+    this.currentX = initialX;
+    this.currentY = initialY;
+    this.targetX = initialX;
+    this.targetY = initialY;
+    this.centerDotX = initialX;
+    this.centerDotY = initialY;
+    this.outlineCircleX = initialX;
+    this.outlineCircleY = initialY;
+    
+    this.cursorElement.style.opacity = '0';
+    if (this.cursorDot) {
+      this.cursorDot.style.opacity = '0';
+    }
+    if (this.centerDot) {
+      this.centerDot.style.opacity = '0';
+    }
+    
     this.updateCursorPosition();
   }
 
@@ -307,25 +390,23 @@ export class AuraCursor {
   private applyStyles(): void {
     if (!this.cursorElement) return;
 
-    const size = this.isPointer && this.options.pointer?.size 
-      ? this.options.pointer.size 
-      : this.baseOptions.size;
+    const size = this.baseOptions.size;
     
     let color = this.baseOptions.color;
     if (this.isHoveringInteractive || this.isPointer) {
       if (this.baseOptions.hoverColor) {
         color = this.baseOptions.hoverColor;
-      } else if (this.isPointer && this.options.pointer?.color) {
-        color = this.options.pointer.color;
+      } else if (this.isPointer && this.options.hoverEffect?.color) {
+        color = this.options.hoverEffect.color;
       }
     }
     
-    const opacity = this.isPointer && this.options.pointer?.opacity !== undefined
-      ? this.options.pointer.opacity 
+    const opacity = this.isPointer && this.options.hoverEffect?.opacity !== undefined
+      ? this.options.hoverEffect.opacity 
       : this.baseOptions.opacity;
 
-    const scale = this.isPointer && this.options.pointer?.scale
-      ? this.options.pointer.scale
+    const scale = this.isPointer && this.options.hoverEffect?.scale
+      ? this.options.hoverEffect.scale
       : 1;
 
     this.cursorElement.style.position = 'fixed';
@@ -353,12 +434,26 @@ export class AuraCursor {
       this.cursorElement.style.zIndex = '9999';
       
       if (this.cursorDot) {
-        let dotColor = this.baseOptions.cursorDotColor || this.baseOptions.color;
-        if ((this.isHoveringInteractive || this.isPointer) && this.baseOptions.hoverColor) {
-          dotColor = this.baseOptions.hoverColor;
+        let dotColor: string;
+        if (this.isHoveringInteractive || this.isPointer) {
+          if (this.baseOptions.centerDotHoverColor) {
+            dotColor = this.baseOptions.centerDotHoverColor;
+          } else if (this.baseOptions.centerDotColor) {
+            dotColor = this.baseOptions.centerDotColor;
+          } else if (this.baseOptions.hoverColor) {
+            dotColor = this.baseOptions.hoverColor;
+          } else {
+            dotColor = this.baseOptions.color;
+          }
+        } else {
+          if (this.baseOptions.centerDotColor) {
+            dotColor = this.baseOptions.centerDotColor;
+          } else {
+            dotColor = this.baseOptions.color;
+          }
         }
-        const primaryOpacity = this.baseOptions.opacity;
-        const dotSize = (this.isPointer || this.isHoveringInteractive) ? '6px' : '4px';
+        const baseSize = this.baseOptions.centerDotSize ?? 3;
+        const dotSize = `${baseSize}px`;
         
         this.cursorDot.style.cssText = '';
         this.cursorDot.style.position = 'fixed';
@@ -369,14 +464,14 @@ export class AuraCursor {
         this.cursorDot.style.border = '0';
         this.cursorDot.style.outline = '0';
         this.cursorDot.style.boxShadow = 'none';
-        this.cursorDot.style.opacity = String(primaryOpacity);
+        this.cursorDot.style.opacity = '1';
         this.cursorDot.style.zIndex = '10001';
         this.cursorDot.style.pointerEvents = 'none';
         this.cursorDot.style.margin = '0';
         this.cursorDot.style.padding = '0';
         this.cursorDot.style.display = 'block';
         this.cursorDot.style.transform = 'translate(-50%, -50%)';
-        this.cursorDot.style.transition = 'width 0.3s ease, height 0.3s ease, background-color 0.3s ease';
+        this.cursorDot.style.transition = 'background-color 0.3s ease';
         this.cursorDot.style.left = `${this.centerDotX}px`;
         this.cursorDot.style.top = `${this.centerDotY}px`;
       }
@@ -391,11 +486,20 @@ export class AuraCursor {
     }
     
     if (this.centerDot) {
-      if (this.options.hideDefaultCursor) {
-        this.centerDot.style.width = '3px';
-        this.centerDot.style.height = '3px';
+      if (this.options.hideDefaultCursor && !this.options.outlineMode) {
+        const centerDotSize = this.baseOptions.centerDotSize ?? 3;
+        let centerDotColor: string;
+        
+        if (this.isHoveringInteractive || this.isPointer) {
+          centerDotColor = this.baseOptions.centerDotHoverColor || this.baseOptions.centerDotColor || this.baseOptions.color;
+        } else {
+          centerDotColor = this.baseOptions.centerDotColor || this.baseOptions.color;
+        }
+        
+        this.centerDot.style.width = `${centerDotSize}px`;
+        this.centerDot.style.height = `${centerDotSize}px`;
         this.centerDot.style.borderRadius = '50%';
-        this.centerDot.style.backgroundColor = color;
+        this.centerDot.style.backgroundColor = centerDotColor;
         this.centerDot.style.border = 'none';
         this.centerDot.style.outline = 'none';
         this.centerDot.style.boxShadow = 'none';
@@ -405,6 +509,7 @@ export class AuraCursor {
         this.centerDot.style.margin = '0';
         this.centerDot.style.padding = '0';
         this.centerDot.style.display = 'block';
+        this.centerDot.style.transition = 'background-color 0.3s ease';
         this.updateCenterDotPosition();
       } else {
         this.centerDot.style.display = 'none';
@@ -433,13 +538,12 @@ export class AuraCursor {
    * The center dot follows the mouse instantly while the outer circle follows with interpolation
    */
   private updateCenterDotPosition(): void {
-    if (!this.centerDot || !this.options.hideDefaultCursor) return;
+    if (!this.centerDot || !this.options.hideDefaultCursor || this.options.outlineMode) return;
 
     this.centerDot.style.position = 'fixed';
     this.centerDot.style.left = `${this.centerDotX}px`;
     this.centerDot.style.top = `${this.centerDotY}px`;
     this.centerDot.style.transform = 'translate(-50%, -50%)';
-    this.centerDot.style.transition = 'none';
     this.centerDot.style.display = 'block';
     this.centerDot.style.border = 'none';
     this.centerDot.style.outline = 'none';
@@ -510,6 +614,10 @@ export class AuraCursor {
     let current: HTMLElement | null = element;
     
     while (current && current !== document.body) {
+      if (!(current instanceof HTMLElement)) {
+        break;
+      }
+      
       if (this.pointerElementsCache.has(current)) {
         const cached = this.pointerElementsCache.get(current);
         if (cached) {
@@ -548,6 +656,10 @@ export class AuraCursor {
    * Checks if an element is interactive (clickable)
    */
   private isInteractiveElement(element: HTMLElement): boolean {
+    if (!element || !(element instanceof HTMLElement)) {
+      return false;
+    }
+    
     if (this.hasPointerCursor(element)) {
       return true;
     }
@@ -626,11 +738,24 @@ export class AuraCursor {
    * Handles mouse movement
    */
   private handleMouseMove = (e: MouseEvent): void => {
+    if (typeof document !== 'undefined') {
+      const doc = document as Document & { __auraCursorLastMouseEvent?: MouseEvent };
+      doc.__auraCursorLastMouseEvent = e;
+    }
+    
     if (!this.isMouseInWindow) {
       return;
     }
 
-    const target = e.target as HTMLElement;
+    if (this.cursorElement && this.cursorElement.style.opacity === '0') {
+      this.applyStyles();
+    }
+
+    const target = e.target;
+    if (!target || !(target instanceof HTMLElement)) {
+      return;
+    }
+    
     const isInteractive = this.isInteractiveElement(target);
     
     const wasOnInteractive = this.isOnInteractiveElement;
@@ -658,7 +783,7 @@ export class AuraCursor {
       this.applyStyles();
     }
 
-    if (this.options.pointer) {
+    if (this.options.hoverEffect) {
       const isPointerElement = this.isInteractiveElement(target);
 
       if (this.isPointer !== isPointerElement) {
@@ -709,16 +834,31 @@ export class AuraCursor {
    * Removes the cursor element from the DOM
    */
   private removeCursorElement(): void {
-    if (this.cursorElement && this.cursorElement.parentNode) {
-      this.cursorElement.parentNode.removeChild(this.cursorElement);
+    if (this.cursorElement) {
+      if (this.cursorElement.parentNode) {
+        this.cursorElement.parentNode.removeChild(this.cursorElement);
+      }
       this.cursorElement = null;
     }
     if (this.cursorDot) {
+      if (this.cursorDot.parentNode) {
+        this.cursorDot.parentNode.removeChild(this.cursorDot);
+      }
       this.cursorDot = null;
     }
     if (this.centerDot) {
+      if (this.centerDot.parentNode) {
+        this.centerDot.parentNode.removeChild(this.centerDot);
+      }
       this.centerDot = null;
     }
+    
+    const orphanedCursors = document.querySelectorAll('.aura-cursor, .aura-cursor-dot, .aura-cursor-center-dot');
+    orphanedCursors.forEach((element) => {
+      if (element.parentNode) {
+        element.parentNode.removeChild(element);
+      }
+    });
   }
 
   /**

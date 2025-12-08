@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2025-12-07
+
+### Added
+- `centerDotHoverColor` option to customize center dot color when hovering over interactive elements
+- `centerDotSize` now works in both outline mode and when `hideDefaultCursor` is enabled
+- Improved center dot behavior: consistent opacity and transitions across all modes
+
+### Changed
+- **BREAKING**: Renamed `cursorDotColor` to `centerDotColor` for better clarity and consistency
+- **BREAKING**: Renamed `pointer` option to `hoverEffect` for better clarity
+- **BREAKING**: Renamed `AuraCursorPointerOptions` interface to `AuraCursorHoverEffectOptions`
+- **BREAKING**: Removed `size` property from `hoverEffect` options (use `scale` to multiply base size instead)
+- Improved prop naming for better React integration and clarity
+- Center dot now uses consistent opacity and transition behavior in all modes
+- Center dot in outline mode and when `hideDefaultCursor` is enabled now have identical behavior
+
+### Fixed
+- Fixed center dot not using `centerDotHoverColor` when hovering over interactive elements
+- Fixed `centerDotSize` not being applied in outline mode
+- Fixed center dot and cursor dot overlapping when both outline mode and `hideDefaultCursor` were enabled
+- Improved center dot styling to ensure no unwanted borders or outlines
+
 ## [1.2.1] - 2025-12-07
 
 ### Fixed
@@ -18,7 +40,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - `hoverColor` option to set custom color when hovering over interactive elements
 - Automatic cursor hiding when mouse leaves the browser window (e.g., address bar, outside viewport)
-- Full TypeScript interface exports (`AuraCursorOptions`, `AuraCursorPointerOptions`, `AuraCursorProps`) for better type compatibility
+- Full TypeScript interface exports (`AuraCursorOptions`, `AuraCursorHoverEffectOptions`, `AuraCursorProps`) for better type compatibility
 - Improved cursor visibility management in `interactiveOnly` mode - cursor hides when leaving interactive areas
 - Updated README with live demo link and comprehensive TypeScript documentation
 
@@ -34,7 +56,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - Outline mode redesigned: two separate circles - inner dot follows mouse instantly, outer circle follows with delay
-- `cursorDotColor` option to customize the center dot color in outline mode
+- `centerDotColor` option to customize the center dot color in outline mode or when hideDefaultCursor is enabled
 - Inner dot in outline mode increases size on hover over interactive elements
 - Inner dot and outer circle border change to hover color when over interactive elements
 
@@ -78,7 +100,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial release
 - Custom cursor with configurable size, color, opacity, and speed
 - Smart detection of interactive elements (links, buttons, etc.)
-- Pointer hover effects with customizable styles
+- Hover effects with customizable styles when cursor is over interactive elements
 - Outline mode with configurable border width
 - Center dot indicator when default cursor is hidden
 - Interactive-only mode
@@ -87,7 +109,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smooth animation with adaptive speed
 - Support for ESM, CommonJS, and UMD formats
 
-[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.2.1...HEAD
+[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.3.0...HEAD
+[1.3.0]: https://github.com/andrecb/aura-cursor/compare/v1.2.1...v1.3.0
 [1.2.1]: https://github.com/andrecb/aura-cursor/compare/v1.2.0...v1.2.1
 [1.2.0]: https://github.com/andrecb/aura-cursor/compare/v1.1.0...v1.2.0
 [1.1.0]: https://github.com/andrecb/aura-cursor/compare/v1.0.4...v1.1.0
