@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2025-12-07
+
+### Fixed
+- Fixed TypeScript declaration files location - moved from `dist/src/` to `dist/` for better module resolution
+- Fixed relative imports in TypeScript declaration files (`.d.ts`) to use package imports instead of relative paths
+- Improved build process with new `moveDeclarationFilesPlugin` to properly organize declaration files
+
 ## [1.0.3] - 2025-12-07
 
 ### Fixed
@@ -45,7 +52,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Smooth animation with adaptive speed
 - Support for ESM, CommonJS, and UMD formats
 
-[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/andrecb/aura-cursor/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/andrecb/aura-cursor/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/andrecb/aura-cursor/compare/v1.0.2...v1.0.3
 [1.0.2]: https://github.com/andrecb/aura-cursor/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/andrecb/aura-cursor/compare/v1.0.0...v1.0.1

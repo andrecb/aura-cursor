@@ -2,6 +2,8 @@ import resolve from '@rollup/plugin-node-resolve';
 import commonjs from '@rollup/plugin-commonjs';
 import typescript from 'rollup-plugin-typescript2';
 import terser from '@rollup/plugin-terser';
+import { renameSync, existsSync, readFileSync, writeFileSync } from 'fs';
+import { join } from 'path';
 
 const rewriteImportPlugin = () => ({
   name: 'rewrite-import',
@@ -17,6 +19,26 @@ const rewriteImportPlugin = () => ({
       };
     }
     return null;
+  }
+});
+
+const moveDeclarationFilesPlugin = () => ({
+  name: 'move-declaration-files',
+  writeBundle() {
+    const reactSrcPath = join(process.cwd(), 'dist/src/react.d.ts');
+    const reactDestPath = join(process.cwd(), 'dist/react.d.ts');
+    if (existsSync(reactSrcPath)) {
+      let content = readFileSync(reactSrcPath, 'utf-8');
+      content = content.replace(/from\s+['"]\.\/aura-cursor['"]/g, "from 'aura-cursor'");
+      writeFileSync(reactDestPath, content);
+    }
+
+    const reactIndexSrcPath = join(process.cwd(), 'dist/src/react-index.d.ts');
+    const reactIndexDestPath = join(process.cwd(), 'dist/react-index.d.ts');
+    if (existsSync(reactIndexSrcPath)) {
+      let content = readFileSync(reactIndexSrcPath, 'utf-8');
+      writeFileSync(reactIndexDestPath, content);
+    }
   }
 });
 
@@ -62,7 +84,8 @@ export default [
         }
       }),
       rewriteImportPlugin(),
-      terser()
+      terser(),
+      moveDeclarationFilesPlugin()
     ]
   }
 ];
