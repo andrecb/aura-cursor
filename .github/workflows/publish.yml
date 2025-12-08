@@ -15,12 +15,13 @@ on:
           - minor
           - major
 
+permissions:
+  contents: write
+  id-token: write
+
 jobs:
   publish:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      id-token: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,6 +33,7 @@ jobs:
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+          always-auth: true
 
       - name: Configure Git
         run: |
@@ -49,8 +51,13 @@ jobs:
 
       - name: Bump version (if workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # creates version, commits the change in package.json and creates the tag locally
           npm run version:${{ github.event.inputs.version }}
+          # prepares remote with token to allow push via CI
+          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
           git push --follow-tags
 
       - name: Extract version from tag
@@ -72,10 +79,8 @@ jobs:
           fi
           echo "✓ Version match: $PACKAGE_VERSION"
 
-      - name: Publish to NPM
-        run: npm publish --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      - name: Publish to NPM via OIDC (trusted publishing)
+        run: npm publish --provenance --access public
 
       - name: Create GitHub Release
         if: github.event_name == 'push'
@@ -97,4 +102,3 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
