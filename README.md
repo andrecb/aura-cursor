@@ -20,6 +20,7 @@
 - 🔧 **TypeScript** - Full TypeScript support with type definitions
 - 👁️ **Center Dot Indicator** - Small dot in the center when default cursor is hidden or in outline mode, with customizable size and hover colors
 - 🪟 **Smart Visibility** - Automatically hides when mouse leaves the browser window
+- 📱 **Mobile Accessibility** - Automatically disables on mobile devices and small screens for better accessibility
 
 ## Installation
 
@@ -466,6 +467,23 @@ Before releasing a new version:
 4. Bump the version using the appropriate script
 5. Push to repository: `git push && git push --tags`
 6. Publish to npm: `npm publish`
+
+## Accessibility
+
+### Mobile Devices
+
+Aura Cursor automatically detects mobile devices and small screens to ensure better accessibility. The cursor will not be initialized on:
+
+- Touch-enabled devices (devices with touch support)
+- Small screens (width ≤ 768px) with mobile user agents
+- Devices that match common mobile user agent patterns
+
+The library also listens for screen size changes and orientation changes, automatically disabling the cursor when switching to mobile view and re-enabling it when switching back to desktop view.
+
+This ensures that:
+- Touch interactions are not interfered with on mobile devices
+- The cursor doesn't appear on devices where it's not needed
+- Performance is optimized by not running unnecessary animations on mobile
 
 ## License
 

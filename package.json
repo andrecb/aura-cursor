@@ -1,6 +1,6 @@
 {
   "name": "aura-cursor",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "type": "module",
   "description": "Aura Cursor is a tool that helps you to create a cursor for your website.",
   "main": "dist/index.js",

@@ -128,6 +128,7 @@ export class AuraCursor {
     centerDotHoverColor?: string;
   };
   private pointerElementsCache: WeakMap<HTMLElement, boolean> = new WeakMap();
+  private resizeHandler: (() => void) | null = null;
 
   constructor(options: AuraCursorOptions = {}) {
     this.baseOptions = {
@@ -152,10 +153,29 @@ export class AuraCursor {
   }
 
   /**
+   * Checks if the current device is a mobile/touch device
+   */
+  private isMobileDevice(): boolean {
+    if (typeof window === 'undefined') {
+      return false;
+    }
+
+    const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const isSmallScreen = window.innerWidth <= 768;
+    const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+    return hasTouch || (isSmallScreen && isMobileUserAgent);
+  }
+
+  /**
    * Initializes the custom cursor
    */
   public init(): void {
     if (this.isActive || typeof window === 'undefined') {
+      return;
+    }
+
+    if (this.isMobileDevice()) {
       return;
     }
 
@@ -167,6 +187,8 @@ export class AuraCursor {
     if (this.options.hideDefaultCursor) {
       this.hideDefaultCursor();
     }
+
+    this.setupResizeListener();
   }
 
   /**
@@ -178,6 +200,7 @@ export class AuraCursor {
     }
 
     this.removeEventListeners();
+    this.removeResizeListener();
     this.removeCursorElement();
     
     if (this.animationFrameId !== null) {
@@ -828,6 +851,60 @@ export class AuraCursor {
     document.removeEventListener('mouseenter', this.handleMouseEnter);
     window.removeEventListener('blur', this.handleWindowBlur);
     window.removeEventListener('focus', this.handleWindowFocus);
+  }
+
+  /**
+   * Sets up resize listener to handle mobile/desktop transitions
+   */
+  private setupResizeListener(): void {
+    if (typeof window === 'undefined' || this.resizeHandler) {
+      return;
+    }
+
+    this.resizeHandler = () => {
+      if (this.isMobileDevice()) {
+        if (this.isActive) {
+          this.removeEventListeners();
+          this.removeCursorElement();
+          
+          if (this.animationFrameId !== null) {
+            cancelAnimationFrame(this.animationFrameId);
+            this.animationFrameId = null;
+          }
+
+          if (this.options.hideDefaultCursor) {
+            this.showDefaultCursor();
+          }
+
+          this.isActive = false;
+        }
+      } else {
+        if (!this.isActive) {
+          this.createCursorElement();
+          this.attachEventListeners();
+          this.animate();
+          this.isActive = true;
+
+          if (this.options.hideDefaultCursor) {
+            this.hideDefaultCursor();
+          }
+        }
+      }
+    };
+
+    window.addEventListener('resize', this.resizeHandler);
+    window.addEventListener('orientationchange', this.resizeHandler);
+  }
+
+  /**
+   * Removes resize listener
+   */
+  private removeResizeListener(): void {
+    if (this.resizeHandler) {
+      window.removeEventListener('resize', this.resizeHandler);
+      window.removeEventListener('orientationchange', this.resizeHandler);
+      this.resizeHandler = null;
+    }
   }
 
   /**
