@@ -27,7 +27,7 @@ const moveDeclarationFilesPlugin = () => ({
   writeBundle() {
     const auraCursorSrcPath = join(process.cwd(), 'dist/src/aura-cursor.d.ts');
     const auraCursorDestPath = join(process.cwd(), 'dist/aura-cursor.d.ts');
-    if (existsSync(auraCursorSrcPath) && !existsSync(auraCursorDestPath)) {
+    if (existsSync(auraCursorSrcPath)) {
       let content = readFileSync(auraCursorSrcPath, 'utf-8');
       writeFileSync(auraCursorDestPath, content);
     }
