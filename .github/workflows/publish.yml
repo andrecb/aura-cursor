@@ -52,12 +52,12 @@ jobs:
       - name: Bump version (if workflow_dispatch)
         if: github.event_name == 'workflow_dispatch'
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           # creates version, commits the change in package.json and creates the tag locally
           npm run version:${{ github.event.inputs.version }}
           # prepares remote with token to allow push via CI
-          git remote set-url origin https://x-access-token:${GITHUB_TOKEN}@github.com/${{ github.repository }}.git
+          git remote set-url origin https://x-access-token:${NPM_TOKEN}@github.com/${{ github.repository }}.git
           git push --follow-tags
 
       - name: Extract version from tag
@@ -89,7 +89,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           name: Release ${{ github.ref_name }}
           body: |
-            ## 🎉 Release ${{ github.ref_name }}
+            ## Release ${{ github.ref_name }}
             
             ### Installation
             ```bash
@@ -97,8 +97,12 @@ jobs:
             ```
             
             ### Changes
-            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for details.
+            See [CHANGELOG.md](https://github.com/${{ github.repository }}/blob/main/CHANGELOG.md) for detailed changes in this release.
+            
+            ### Links
+            - [Documentation](https://github.com/${{ github.repository }}#readme)
+            - [NPM Package](https://www.npmjs.com/package/aura-cursor)
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
