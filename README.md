@@ -16,6 +16,9 @@
 - ⚡ **Smooth Animation** - Fluid cursor movement with configurable speed
 - 🎭 **Flexible Options** - Hide default cursor, interactive-only mode, outline mode, and more
 - 🌈 **Hover Colors** - Custom colors when hovering over interactive elements
+- 🌀 **Trail & Lag** - Configurable ghost trail, lag multiplier, and easing
+- 🧲 **Magnetic Snap** - Optional pull toward interactive elements
+- 🖱️ **Click Effects** - Scale pulse on click
 - 📦 **Lightweight** - Small bundle size with zero dependencies
 - 🔧 **TypeScript** - Full TypeScript support with type definitions
 - 👁️ **Center Dot Indicator** - Small dot in the center when default cursor is hidden or in outline mode, with customizable size and hover colors
@@ -154,6 +157,8 @@ function App() {
 | `color` | `string` | `'#000000'` | Circle color (hex, rgb, etc.) |
 | `opacity` | `number` | `0.5` | Circle opacity (0 to 1) |
 | `speed` | `number` | `0.3` | Mouse follow speed (0 to 1) |
+| `lag` | `number` | `1` | Delay multiplier (higher = slower trail / more lag) |
+| `easing` | `'linear' \| 'easeOut'` | `'linear'` | Interpolation easing toward the target |
 | `hideDefaultCursor` | `boolean` | `false` | Hide the default browser cursor |
 | `className` | `string` | `''` | Additional CSS class for cursor element |
 | `interactiveOnly` | `boolean` | `false` | Show cursor only on interactive elements |
@@ -164,6 +169,41 @@ function App() {
 | `centerDotSize` | `number` | `3` | Size of the center dot in pixels when hideDefaultCursor is enabled or in outline mode |
 | `centerDotHoverColor` | `string` | `undefined` | Color for the center dot when hovering over interactive elements (uses centerDotColor or primary color if not provided) |
 | `hoverEffect` | `AuraCursorHoverEffectOptions` | `undefined` | Options for hover effects when cursor is over interactive elements |
+| `trail` | `AuraCursorTrailOptions` | `undefined` | Ghost trail behind the cursor (`length` default `0` = off) |
+| `clickEffect` | `boolean \| AuraCursorClickEffectOptions` | `undefined` | Scale pulse on click |
+| `mixBlendMode` | `string` | `undefined` | CSS `mix-blend-mode` (e.g. `difference`) |
+| `blur` | `number` | `undefined` | CSS blur in pixels |
+| `zIndex` | `number` | `9999` | Cursor z-index |
+| `borderRadius` | `string \| number` | `undefined` | Overrides shape radius |
+| `shape` | `'circle' \| 'square' \| 'rounded'` | `'circle'` | Cursor shape |
+| `customCursor` | `HTMLElement \| string` | `undefined` | Custom HTML content inside the cursor |
+| `magnetic` | `boolean \| AuraCursorMagneticOptions` | `undefined` | Snap toward interactive element centers |
+| `interactiveSelector` | `string` | `undefined` | Extra/override CSS selector for interactive elements |
+| `excludeSelector` | `string` | `undefined` | Elements matching this selector are never interactive |
+| `onHoverInteractive` | `(el: HTMLElement \| null) => void` | `undefined` | Fires when interactive hover state changes |
+| `onClick` | `(el: HTMLElement \| null, event: MouseEvent) => void` | `undefined` | Fires on mouse down |
+
+### AuraCursorTrailOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `length` | `number` | `0` | Number of ghost elements (0 disables trail) |
+| `fade` | `number` | `0.6` | Opacity multiplier for ghosts |
+| `scale` | `number` | `0.95` | Scale falloff per ghost |
+
+### AuraCursorClickEffectOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `scale` | `number` | `0.75` | Scale while pressing |
+| `duration` | `number` | `150` | Restore duration in ms |
+
+### AuraCursorMagneticOptions
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `strength` | `number` | `0.35` | Pull strength toward element center (0–1) |
+| `padding` | `number` | `40` | Extra hit area around the element in px |
 
 ### AuraCursorHoverEffectOptions
 
@@ -187,6 +227,25 @@ const cursor = new AuraCursor({
   color: '#ff6b6b',
   opacity: 0.6,
   speed: 0.2
+});
+
+cursor.init();
+```
+
+### Trail, lag and click
+
+```typescript
+const cursor = new AuraCursor({
+  size: 22,
+  color: '#111111',
+  speed: 0.25,
+  lag: 1.8,
+  easing: 'easeOut',
+  trail: { length: 6, fade: 0.55, scale: 0.92 },
+  clickEffect: { scale: 0.7, duration: 160 },
+  magnetic: { strength: 0.4, padding: 48 },
+  shape: 'rounded',
+  mixBlendMode: 'difference',
 });
 
 cursor.init();
