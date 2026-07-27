@@ -22,6 +22,7 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    environment: aura_cursor
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -34,8 +35,6 @@ jobs:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
           always-auth: true
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Configure Git
         run: |
@@ -81,6 +80,8 @@ jobs:
 
       - name: Publish to NPM
         run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
       - name: Create GitHub Release
         if: github.event_name == 'push'

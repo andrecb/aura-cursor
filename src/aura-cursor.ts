@@ -95,6 +95,39 @@ export interface AuraCursorOptions {
   centerDotHoverColor?: string;
 }
 
+type AuraCursorResolvedOptions = Required<
+  Omit<
+    AuraCursorOptions,
+    | 'hoverEffect'
+    | 'centerDotColor'
+    | 'hoverColor'
+    | 'centerDotSize'
+    | 'centerDotHoverColor'
+  >
+> & {
+  centerDotColor?: string;
+  hoverColor?: string;
+  centerDotSize?: number;
+  centerDotHoverColor?: string;
+  hoverEffect?: AuraCursorHoverEffectOptions;
+};
+
+const INTERACTIVE_SELECTOR =
+  'a, button, [role="button"], [onclick], input[type="range"], input[type="color"], input[type="checkbox"]';
+const CURSOR_SELECTOR = '.aura-cursor, .aura-cursor-dot, .aura-cursor-center-dot';
+const IDLE_EPSILON_SQ = 0.01;
+const FAST_DISTANCE_SQ = 2500;
+const CURSOR_TRANSITION =
+  'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, opacity 0.3s ease, border 0.3s ease';
+
+function removeNode(node: Element | null): void {
+  node?.parentNode?.removeChild(node);
+}
+
+function removeOrphanedCursors(): void {
+  document.querySelectorAll(CURSOR_SELECTOR).forEach(removeNode);
+}
+
 export class AuraCursor {
   private cursorElement: HTMLDivElement | null = null;
   private cursorDot: HTMLDivElement | null = null;
@@ -108,25 +141,15 @@ export class AuraCursor {
   private centerDotY = 0;
   private outlineCircleX = 0;
   private outlineCircleY = 0;
+  private currentScale = 1;
   private animationFrameId: number | null = null;
   private isActive = false;
   private isPointer = false;
   private isHoveringInteractive = false;
   private isOnInteractiveElement = false;
   private isMouseInWindow = true;
-  private options: Required<Omit<AuraCursorOptions, 'hoverEffect' | 'centerDotColor' | 'hoverColor' | 'centerDotSize' | 'centerDotHoverColor'>> & { 
-    centerDotColor?: string;
-    hoverColor?: string;
-    centerDotSize?: number;
-    centerDotHoverColor?: string;
-    hoverEffect?: AuraCursorHoverEffectOptions;
-  };
-  private baseOptions: Required<Omit<AuraCursorOptions, 'hoverEffect' | 'centerDotColor' | 'hoverColor' | 'centerDotSize' | 'centerDotHoverColor'>> & {
-    centerDotColor?: string;
-    hoverColor?: string;
-    centerDotSize?: number;
-    centerDotHoverColor?: string;
-  };
+  private options: AuraCursorResolvedOptions;
+  private baseOptions: Omit<AuraCursorResolvedOptions, 'hoverEffect'>;
   private pointerElementsCache: WeakMap<HTMLElement, boolean> = new WeakMap();
   private resizeHandler: (() => void) | null = null;
 
@@ -152,16 +175,15 @@ export class AuraCursor {
     };
   }
 
-  /**
-   * Checks if the current device is a mobile/touch device
-   */
   private isMobileDevice(): boolean {
     if (typeof window === 'undefined') {
       return false;
     }
 
     if (typeof process !== 'undefined' && process.env?.VITEST === 'true') {
-      const forceDesktop = (window as Window & { __AURA_CURSOR_FORCE_DESKTOP__?: boolean }).__AURA_CURSOR_FORCE_DESKTOP__;
+      const forceDesktop = (
+        window as Window & { __AURA_CURSOR_FORCE_DESKTOP__?: boolean }
+      ).__AURA_CURSOR_FORCE_DESKTOP__;
       if (forceDesktop === true) {
         return false;
       }
@@ -169,14 +191,14 @@ export class AuraCursor {
 
     const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const isSmallScreen = window.innerWidth <= 768;
-    const isMobileUserAgent = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    const isMobileUserAgent =
+      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      );
 
     return hasTouch || (isSmallScreen && isMobileUserAgent);
   }
 
-  /**
-   * Initializes the custom cursor
-   */
   public init(): void {
     if (this.isActive || typeof window === 'undefined') {
       return;
@@ -188,7 +210,7 @@ export class AuraCursor {
 
     this.createCursorElement();
     this.attachEventListeners();
-    this.animate();
+    this.startAnimation();
     this.isActive = true;
 
     if (this.options.hideDefaultCursor) {
@@ -198,9 +220,6 @@ export class AuraCursor {
     this.setupResizeListener();
   }
 
-  /**
-   * Removes the custom cursor
-   */
   public destroy(): void {
     if (!this.isActive) {
       return;
@@ -209,11 +228,7 @@ export class AuraCursor {
     this.removeEventListeners();
     this.removeResizeListener();
     this.removeCursorElement();
-    
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
+    this.stopAnimation();
 
     if (this.options.hideDefaultCursor) {
       this.showDefaultCursor();
@@ -222,178 +237,140 @@ export class AuraCursor {
     this.isActive = false;
   }
 
-  /**
-   * Updates the cursor options
-   */
   public updateOptions(options: Partial<AuraCursorOptions>): void {
     if (options.hoverEffect !== undefined) {
       this.options.hoverEffect = options.hoverEffect;
     }
-    
-    const hideDefaultCursorChanged = options.hideDefaultCursor !== undefined && 
+
+    const hideDefaultCursorChanged =
+      options.hideDefaultCursor !== undefined &&
       options.hideDefaultCursor !== this.baseOptions.hideDefaultCursor;
-    
+    const outlineModeChanged =
+      options.outlineMode !== undefined &&
+      options.outlineMode !== this.baseOptions.outlineMode;
+
     if (options.size !== undefined) this.baseOptions.size = options.size;
     if (options.color !== undefined) this.baseOptions.color = options.color;
     if (options.opacity !== undefined) this.baseOptions.opacity = options.opacity;
     if (options.speed !== undefined) this.baseOptions.speed = options.speed;
-    if (options.hideDefaultCursor !== undefined) this.baseOptions.hideDefaultCursor = options.hideDefaultCursor;
-    if (options.className !== undefined) this.baseOptions.className = options.className;
-    if (options.interactiveOnly !== undefined) this.baseOptions.interactiveOnly = options.interactiveOnly;
-    if (options.outlineMode !== undefined) {
+    if (options.hideDefaultCursor !== undefined)
+      this.baseOptions.hideDefaultCursor = options.hideDefaultCursor;
+    if (options.className !== undefined)
+      this.baseOptions.className = options.className;
+    if (options.interactiveOnly !== undefined)
+      this.baseOptions.interactiveOnly = options.interactiveOnly;
+    if (options.outlineMode !== undefined)
       this.baseOptions.outlineMode = options.outlineMode;
-      if (this.isActive) {
-        this.removeCursorElement();
-        this.createCursorElement();
-        this.applyStyles();
-      }
-    }
-    if (options.outlineWidth !== undefined) {
+    if (options.outlineWidth !== undefined)
       this.baseOptions.outlineWidth = options.outlineWidth;
-      if (this.isActive && this.options.outlineMode) {
-        this.applyStyles();
-      }
-    }
-    if (options.centerDotColor !== undefined) {
+    if (options.centerDotColor !== undefined)
       this.baseOptions.centerDotColor = options.centerDotColor;
-      if (this.isActive && this.options.outlineMode) {
-        this.applyStyles();
-      }
-    }
-    if (options.hoverColor !== undefined) {
+    if (options.hoverColor !== undefined)
       this.baseOptions.hoverColor = options.hoverColor;
-      if (this.isActive) {
-        this.applyStyles();
-      }
-    }
-    if (options.centerDotSize !== undefined) {
+    if (options.centerDotSize !== undefined)
       this.baseOptions.centerDotSize = options.centerDotSize;
-      if (this.isActive && (this.options.hideDefaultCursor || this.options.outlineMode)) {
-        this.applyStyles();
-      }
-    }
-    if (options.centerDotHoverColor !== undefined) {
+    if (options.centerDotHoverColor !== undefined)
       this.baseOptions.centerDotHoverColor = options.centerDotHoverColor;
-      if (this.isActive && this.options.hideDefaultCursor) {
-        this.applyStyles();
-      }
-    }
-    
+
     this.options = {
       ...this.baseOptions,
       hoverEffect: this.options.hoverEffect,
     };
-    
+
+    if (!this.isActive) {
+      return;
+    }
+
+    if (outlineModeChanged) {
+      this.removeCursorElement();
+      this.createCursorElement();
+      return;
+    }
+
     if (hideDefaultCursorChanged) {
-      if (this.options.hideDefaultCursor && !this.options.outlineMode) {
-        this.hideDefaultCursor();
-        const existingCenterDots = document.querySelectorAll('.aura-cursor-center-dot');
-        existingCenterDots.forEach((element) => {
-          if (element.parentNode) {
-            element.parentNode.removeChild(element);
-          }
-        });
-        if (!this.centerDot) {
-          this.centerDot = document.createElement('div');
-          this.centerDot.className = 'aura-cursor-center-dot';
-          document.body.appendChild(this.centerDot);
-          this.applyStyles();
-        }
-      } else {
-        this.showDefaultCursor();
-        const existingCenterDots = document.querySelectorAll('.aura-cursor-center-dot');
-        existingCenterDots.forEach((element) => {
-          if (element.parentNode) {
-            element.parentNode.removeChild(element);
-          }
-        });
-        if (this.centerDot && this.centerDot.parentNode) {
-          this.centerDot.parentNode.removeChild(this.centerDot);
-          this.centerDot = null;
-        }
-      }
+      this.syncCenterDotForHideDefaultCursor();
     }
-    
-    if (options.outlineMode !== undefined && this.isActive) {
-      if (this.options.outlineMode) {
-        if (!this.cursorDot) {
-          this.cursorDot = document.createElement('div');
-          this.cursorDot.className = 'aura-cursor-dot';
-          document.body.appendChild(this.cursorDot);
-        }
-        if (this.centerDot && this.centerDot.parentNode) {
-          this.centerDot.parentNode.removeChild(this.centerDot);
-          this.centerDot = null;
-        }
-        this.applyStyles();
-      } else {
-        if (this.cursorDot && this.cursorDot.parentNode) {
-          this.cursorDot.parentNode.removeChild(this.cursorDot);
-          this.cursorDot = null;
-        }
-        if (this.options.hideDefaultCursor && !this.centerDot) {
-          this.centerDot = document.createElement('div');
-          this.centerDot.className = 'aura-cursor-center-dot';
-          document.body.appendChild(this.centerDot);
-        }
-        this.applyStyles();
-      }
-    }
-    
+
     if (this.cursorElement) {
-      this.applyStyles();
+      if (options.className !== undefined) {
+        this.cursorElement.className =
+          `aura-cursor ${this.options.className}`.trim();
+      }
+      this.applyVisualStyles();
     }
   }
 
-  /**
-   * Creates the cursor DOM element
-   */
-  private createCursorElement(): void {
-    const existingCursors = document.querySelectorAll('.aura-cursor, .aura-cursor-dot, .aura-cursor-center-dot');
-    existingCursors.forEach((element) => {
-      if (element.parentNode) {
-        element.parentNode.removeChild(element);
+  private syncCenterDotForHideDefaultCursor(): void {
+    if (this.options.hideDefaultCursor && !this.options.outlineMode) {
+      this.hideDefaultCursor();
+      this.ensureCenterDot();
+    } else {
+      this.showDefaultCursor();
+      if (!this.options.outlineMode) {
+        removeNode(this.centerDot);
+        this.centerDot = null;
+        removeOrphanedCursors();
       }
+    }
+  }
+
+  private ensureCenterDot(): void {
+    document.querySelectorAll('.aura-cursor-center-dot').forEach((el) => {
+      if (el !== this.centerDot) removeNode(el);
     });
-    
-    this.cursorElement = document.createElement('div');
-    this.cursorElement.className = `aura-cursor ${this.options.className}`.trim();
-    
-    this.applyStyles();
-    
-    document.body.appendChild(this.cursorElement);
-    
-    if (this.options.outlineMode) {
+    if (!this.centerDot) {
+      this.centerDot = document.createElement('div');
+      this.centerDot.className = 'aura-cursor-center-dot';
+      document.body.appendChild(this.centerDot);
+      this.applyCenterDotBaseStyles();
+    }
+  }
+
+  private ensureCursorDot(): void {
+    if (!this.cursorDot) {
       this.cursorDot = document.createElement('div');
       this.cursorDot.className = 'aura-cursor-dot';
       document.body.appendChild(this.cursorDot);
-      this.applyStyles();
+      this.applyCursorDotBaseStyles();
     }
-    
-    if (this.options.hideDefaultCursor && !this.options.outlineMode) {
-      if (!this.centerDot) {
-        this.centerDot = document.createElement('div');
-        this.centerDot.className = 'aura-cursor-center-dot';
-        document.body.appendChild(this.centerDot);
-        this.applyStyles();
-      }
-    } else if (this.centerDot && this.centerDot.parentNode) {
-      this.centerDot.parentNode.removeChild(this.centerDot);
-      this.centerDot = null;
+  }
+
+  private createCursorElement(): void {
+    removeOrphanedCursors();
+    this.cursorElement = null;
+    this.cursorDot = null;
+    this.centerDot = null;
+
+    this.cursorElement = document.createElement('div');
+    this.cursorElement.className =
+      `aura-cursor ${this.options.className}`.trim();
+    this.applyCursorBaseStyles();
+    this.applyVisualStyles();
+    document.body.appendChild(this.cursorElement);
+
+    if (this.options.outlineMode) {
+      this.ensureCursorDot();
+      this.applyVisualStyles();
+    } else if (this.options.hideDefaultCursor) {
+      this.ensureCenterDot();
+      this.applyVisualStyles();
     }
-    
+
     let initialX = window.innerWidth / 2;
     let initialY = window.innerHeight / 2;
-    
-    if (typeof document !== 'undefined') {
-      const doc = document as Document & { __auraCursorLastMouseEvent?: MouseEvent };
-      const lastMouseEvent = doc.__auraCursorLastMouseEvent;
-      if (lastMouseEvent && lastMouseEvent.clientX !== undefined && lastMouseEvent.clientY !== undefined) {
-        initialX = lastMouseEvent.clientX;
-        initialY = lastMouseEvent.clientY;
-      }
+
+    const lastMouseEvent = (
+      document as Document & { __auraCursorLastMouseEvent?: MouseEvent }
+    ).__auraCursorLastMouseEvent;
+    if (
+      lastMouseEvent &&
+      lastMouseEvent.clientX !== undefined &&
+      lastMouseEvent.clientY !== undefined
+    ) {
+      initialX = lastMouseEvent.clientX;
+      initialY = lastMouseEvent.clientY;
     }
-    
+
     this.currentX = initialX;
     this.currentY = initialY;
     this.targetX = initialX;
@@ -402,318 +379,315 @@ export class AuraCursor {
     this.centerDotY = initialY;
     this.outlineCircleX = initialX;
     this.outlineCircleY = initialY;
-    
-    this.cursorElement.style.opacity = '0';
-    if (this.cursorDot) {
-      this.cursorDot.style.opacity = '0';
-    }
-    if (this.centerDot) {
-      this.centerDot.style.opacity = '0';
-    }
-    
+
+    this.hideCursor();
     this.updateCursorPosition();
+    this.updateCenterDotPosition();
+    this.updateCursorDotPosition();
   }
 
-  /**
-   * Applies styles to the cursor element
-   */
-  private applyStyles(): void {
+  private applyCursorBaseStyles(): void {
+    if (!this.cursorElement) return;
+    const style = this.cursorElement.style;
+    style.position = 'fixed';
+    style.left = '0px';
+    style.top = '0px';
+    style.borderRadius = '50%';
+    style.pointerEvents = 'none';
+    style.zIndex = '9999';
+    style.boxShadow = 'none';
+    style.outline = 'none';
+    style.margin = '0';
+    style.padding = '0';
+    style.display = 'block';
+    style.willChange = 'transform';
+    style.transition = CURSOR_TRANSITION;
+  }
+
+  private applyCursorDotBaseStyles(): void {
+    if (!this.cursorDot) return;
+    const style = this.cursorDot.style;
+    style.position = 'fixed';
+    style.left = '0px';
+    style.top = '0px';
+    style.borderRadius = '50%';
+    style.border = '0';
+    style.outline = '0';
+    style.boxShadow = 'none';
+    style.opacity = '1';
+    style.zIndex = '10001';
+    style.pointerEvents = 'none';
+    style.margin = '0';
+    style.padding = '0';
+    style.display = 'block';
+    style.willChange = 'transform';
+    style.transition = 'background-color 0.3s ease';
+  }
+
+  private applyCenterDotBaseStyles(): void {
+    if (!this.centerDot) return;
+    const style = this.centerDot.style;
+    style.position = 'fixed';
+    style.left = '0px';
+    style.top = '0px';
+    style.borderRadius = '50%';
+    style.border = 'none';
+    style.outline = 'none';
+    style.boxShadow = 'none';
+    style.opacity = '1';
+    style.zIndex = '10000';
+    style.pointerEvents = 'none';
+    style.margin = '0';
+    style.padding = '0';
+    style.display = 'block';
+    style.willChange = 'transform';
+    style.transition = 'background-color 0.3s ease';
+  }
+
+  private applyVisualStyles(): void {
     if (!this.cursorElement) return;
 
     const size = this.baseOptions.size;
-    
+    const hovering = this.isHoveringInteractive || this.isPointer;
+
     let color = this.baseOptions.color;
-    if (this.isHoveringInteractive || this.isPointer) {
+    if (hovering) {
       if (this.baseOptions.hoverColor) {
         color = this.baseOptions.hoverColor;
       } else if (this.isPointer && this.options.hoverEffect?.color) {
         color = this.options.hoverEffect.color;
       }
     }
-    
-    const opacity = this.isPointer && this.options.hoverEffect?.opacity !== undefined
-      ? this.options.hoverEffect.opacity 
-      : this.baseOptions.opacity;
 
-    const scale = this.isPointer && this.options.hoverEffect?.scale
-      ? this.options.hoverEffect.scale
-      : 1;
+    const opacity =
+      this.isPointer && this.options.hoverEffect?.opacity !== undefined
+        ? this.options.hoverEffect.opacity
+        : this.baseOptions.opacity;
 
-    this.cursorElement.style.position = 'fixed';
-    this.cursorElement.style.width = `${size}px`;
-    this.cursorElement.style.height = `${size}px`;
-    this.cursorElement.style.borderRadius = '50%';
-    this.cursorElement.style.pointerEvents = 'none';
-    this.cursorElement.style.zIndex = '9999';
-    this.cursorElement.style.transform = `translate(-50%, -50%) scale(${scale})`;
-    this.cursorElement.style.transition = 'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, opacity 0.3s ease, transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), border 0.3s ease';
-    this.cursorElement.style.left = '0px';
-    this.cursorElement.style.top = '0px';
-    this.cursorElement.style.boxShadow = 'none';
-    this.cursorElement.style.outline = 'none';
+    this.currentScale =
+      this.isPointer && this.options.hoverEffect?.scale
+        ? this.options.hoverEffect.scale
+        : 1;
+
+    const displaySize = size * this.currentScale;
+    const style = this.cursorElement.style;
+    style.width = `${displaySize}px`;
+    style.height = `${displaySize}px`;
 
     if (this.options.outlineMode) {
-      const outlineSize = size;
-      this.cursorElement.style.width = `${outlineSize}px`;
-      this.cursorElement.style.height = `${outlineSize}px`;
-      this.cursorElement.style.backgroundColor = 'transparent';
-      this.cursorElement.style.border = `${this.options.outlineWidth}px solid ${color}`;
-      this.cursorElement.style.opacity = String(opacity);
-      this.cursorElement.style.boxShadow = 'none';
-      this.cursorElement.style.outline = 'none';
-      this.cursorElement.style.zIndex = '9999';
-      
+      style.backgroundColor = 'transparent';
+      style.border = `${this.options.outlineWidth}px solid ${color}`;
+      style.opacity = String(opacity);
+
       if (this.cursorDot) {
-        let dotColor: string;
-        if (this.isHoveringInteractive || this.isPointer) {
-          if (this.baseOptions.centerDotHoverColor) {
-            dotColor = this.baseOptions.centerDotHoverColor;
-          } else if (this.baseOptions.centerDotColor) {
-            dotColor = this.baseOptions.centerDotColor;
-          } else if (this.baseOptions.hoverColor) {
-            dotColor = this.baseOptions.hoverColor;
-          } else {
-            dotColor = this.baseOptions.color;
-          }
-        } else {
-          if (this.baseOptions.centerDotColor) {
-            dotColor = this.baseOptions.centerDotColor;
-          } else {
-            dotColor = this.baseOptions.color;
-          }
-        }
-        const baseSize = this.baseOptions.centerDotSize ?? 3;
-        const dotSize = `${baseSize}px`;
-        
-        this.cursorDot.style.cssText = '';
-        this.cursorDot.style.position = 'fixed';
+        const dotColor = hovering
+          ? this.baseOptions.centerDotHoverColor ||
+            this.baseOptions.centerDotColor ||
+            this.baseOptions.hoverColor ||
+            this.baseOptions.color
+          : this.baseOptions.centerDotColor || this.baseOptions.color;
+        const dotSize = `${this.baseOptions.centerDotSize ?? 3}px`;
         this.cursorDot.style.width = dotSize;
         this.cursorDot.style.height = dotSize;
-        this.cursorDot.style.borderRadius = '50%';
         this.cursorDot.style.backgroundColor = dotColor;
-        this.cursorDot.style.border = '0';
-        this.cursorDot.style.outline = '0';
-        this.cursorDot.style.boxShadow = 'none';
-        this.cursorDot.style.opacity = '1';
-        this.cursorDot.style.zIndex = '10001';
-        this.cursorDot.style.pointerEvents = 'none';
-        this.cursorDot.style.margin = '0';
-        this.cursorDot.style.padding = '0';
         this.cursorDot.style.display = 'block';
-        this.cursorDot.style.transform = 'translate(-50%, -50%)';
-        this.cursorDot.style.transition = 'background-color 0.3s ease';
-        this.cursorDot.style.left = `${this.centerDotX}px`;
-        this.cursorDot.style.top = `${this.centerDotY}px`;
+        this.cursorDot.style.opacity = '1';
       }
     } else {
-      this.cursorElement.style.backgroundColor = color;
-      this.cursorElement.style.opacity = String(opacity);
-      this.cursorElement.style.border = 'none';
-      
+      style.backgroundColor = color;
+      style.opacity = String(opacity);
+      style.border = 'none';
+
       if (this.cursorDot) {
         this.cursorDot.style.display = 'none';
       }
     }
-    
+
     if (this.centerDot) {
       if (this.options.hideDefaultCursor && !this.options.outlineMode) {
         const centerDotSize = this.baseOptions.centerDotSize ?? 3;
-        let centerDotColor: string;
-        
-        if (this.isHoveringInteractive || this.isPointer) {
-          centerDotColor = this.baseOptions.centerDotHoverColor || this.baseOptions.centerDotColor || this.baseOptions.color;
-        } else {
-          centerDotColor = this.baseOptions.centerDotColor || this.baseOptions.color;
-        }
-        
+        const centerDotColor = hovering
+          ? this.baseOptions.centerDotHoverColor ||
+            this.baseOptions.centerDotColor ||
+            this.baseOptions.color
+          : this.baseOptions.centerDotColor || this.baseOptions.color;
+
         this.centerDot.style.width = `${centerDotSize}px`;
         this.centerDot.style.height = `${centerDotSize}px`;
-        this.centerDot.style.borderRadius = '50%';
         this.centerDot.style.backgroundColor = centerDotColor;
-        this.centerDot.style.border = 'none';
-        this.centerDot.style.outline = 'none';
-        this.centerDot.style.boxShadow = 'none';
-        this.centerDot.style.opacity = '1';
-        this.centerDot.style.zIndex = '10000';
-        this.centerDot.style.pointerEvents = 'none';
-        this.centerDot.style.margin = '0';
-        this.centerDot.style.padding = '0';
         this.centerDot.style.display = 'block';
-        this.centerDot.style.transition = 'background-color 0.3s ease';
-        this.updateCenterDotPosition();
+        this.centerDot.style.opacity = '1';
       } else {
         this.centerDot.style.display = 'none';
       }
     }
+
+    this.updateCursorPosition();
   }
 
-
-  /**
-   * Updates the visual position of the cursor
-   */
   private updateCursorPosition(): void {
     if (!this.cursorElement) return;
-    
-    if (this.options.outlineMode) {
-      this.cursorElement.style.left = `${this.outlineCircleX}px`;
-      this.cursorElement.style.top = `${this.outlineCircleY}px`;
-    } else {
-      this.cursorElement.style.left = `${this.currentX}px`;
-      this.cursorElement.style.top = `${this.currentY}px`;
-    }
+
+    const x = this.options.outlineMode ? this.outlineCircleX : this.currentX;
+    const y = this.options.outlineMode ? this.outlineCircleY : this.currentY;
+    this.cursorElement.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
   }
 
-  /**
-   * Updates the center dot position to follow the mouse directly (no delay)
-   * The center dot follows the mouse instantly while the outer circle follows with interpolation
-   */
   private updateCenterDotPosition(): void {
-    if (!this.centerDot || !this.options.hideDefaultCursor || this.options.outlineMode) return;
+    if (
+      !this.centerDot ||
+      !this.options.hideDefaultCursor ||
+      this.options.outlineMode
+    )
+      return;
 
-    this.centerDot.style.position = 'fixed';
-    this.centerDot.style.left = `${this.centerDotX}px`;
-    this.centerDot.style.top = `${this.centerDotY}px`;
-    this.centerDot.style.transform = 'translate(-50%, -50%)';
-    this.centerDot.style.display = 'block';
-    this.centerDot.style.border = 'none';
-    this.centerDot.style.outline = 'none';
-    this.centerDot.style.boxShadow = 'none';
+    this.centerDot.style.transform = `translate3d(${this.centerDotX}px, ${this.centerDotY}px, 0) translate(-50%, -50%)`;
   }
 
-  /**
-   * Updates the cursor dot position in outline mode to follow the mouse directly (no delay)
-   */
   private updateCursorDotPosition(): void {
     if (!this.cursorDot || !this.options.outlineMode) return;
 
-    this.cursorDot.style.left = `${this.centerDotX}px`;
-    this.cursorDot.style.top = `${this.centerDotY}px`;
-    this.cursorDot.style.border = '0';
-    this.cursorDot.style.outline = '0';
-    this.cursorDot.style.boxShadow = 'none';
+    this.cursorDot.style.transform = `translate3d(${this.centerDotX}px, ${this.centerDotY}px, 0) translate(-50%, -50%)`;
   }
 
-  /**
-   * Animation loop using requestAnimationFrame
-   */
+  private startAnimation(): void {
+    if (this.animationFrameId !== null) return;
+    this.animationFrameId = requestAnimationFrame(this.animate);
+  }
+
+  private stopAnimation(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
+  }
+
   private animate = (): void => {
+    let settled = false;
+
     if (this.options.outlineMode) {
       this.centerDotX = this.targetX;
       this.centerDotY = this.targetY;
-      
-      const distance = Math.sqrt(
-        Math.pow(this.targetX - this.outlineCircleX, 2) + 
-        Math.pow(this.targetY - this.outlineCircleY, 2)
-      );
-      
-      const baseSpeed = this.options.speed * 0.5;
-      const adaptiveSpeed = distance > 50 
-        ? Math.min(baseSpeed * 2, 0.8)
-        : baseSpeed;
-      
-      this.outlineCircleX += (this.targetX - this.outlineCircleX) * adaptiveSpeed;
-      this.outlineCircleY += (this.targetY - this.outlineCircleY) * adaptiveSpeed;
-      
+
+      const dx = this.targetX - this.outlineCircleX;
+      const dy = this.targetY - this.outlineCircleY;
+      const distSq = dx * dx + dy * dy;
+
+      if (distSq < IDLE_EPSILON_SQ) {
+        this.outlineCircleX = this.targetX;
+        this.outlineCircleY = this.targetY;
+        settled = true;
+      } else {
+        const baseSpeed = this.options.speed * 0.5;
+        const adaptiveSpeed =
+          distSq > FAST_DISTANCE_SQ ? Math.min(baseSpeed * 2, 0.8) : baseSpeed;
+        this.outlineCircleX += dx * adaptiveSpeed;
+        this.outlineCircleY += dy * adaptiveSpeed;
+      }
+
       this.updateCursorPosition();
       this.updateCursorDotPosition();
     } else {
-      const distance = Math.sqrt(
-        Math.pow(this.targetX - this.currentX, 2) + 
-        Math.pow(this.targetY - this.currentY, 2)
-      );
-      
-      const adaptiveSpeed = distance > 50 
-        ? Math.min(this.options.speed * 2, 0.8)
-        : this.options.speed;
-      
-      this.currentX += (this.targetX - this.currentX) * adaptiveSpeed;
-      this.currentY += (this.targetY - this.currentY) * adaptiveSpeed;
+      const dx = this.targetX - this.currentX;
+      const dy = this.targetY - this.currentY;
+      const distSq = dx * dx + dy * dy;
+
+      if (distSq < IDLE_EPSILON_SQ) {
+        this.currentX = this.targetX;
+        this.currentY = this.targetY;
+        settled = true;
+      } else {
+        const adaptiveSpeed =
+          distSq > FAST_DISTANCE_SQ
+            ? Math.min(this.options.speed * 2, 0.8)
+            : this.options.speed;
+        this.currentX += dx * adaptiveSpeed;
+        this.currentY += dy * adaptiveSpeed;
+      }
+
       this.updateCursorPosition();
     }
-    
+
     this.updateCenterDotPosition();
+
+    if (settled) {
+      this.animationFrameId = null;
+      return;
+    }
 
     this.animationFrameId = requestAnimationFrame(this.animate);
   };
 
-  /**
-   * Checks if an element or any of its ancestors has cursor: pointer
-   * This function checks the original CSS even when global cursor: none is applied
-   */
   private hasPointerCursor(element: HTMLElement): boolean {
     let current: HTMLElement | null = element;
-    
+
     while (current && current !== document.body) {
       if (!(current instanceof HTMLElement)) {
         break;
       }
-      
+
       if (this.pointerElementsCache.has(current)) {
-        const cached = this.pointerElementsCache.get(current);
-        if (cached) {
+        if (this.pointerElementsCache.get(current)) {
           return true;
         }
         current = current.parentElement;
         continue;
       }
-      
-      const computedStyle = window.getComputedStyle(current, null);
-      let cursor = computedStyle.cursor;
-      
-      if (cursor === 'none' && this.options.hideDefaultCursor && this.styleElement?.parentNode) {
-        const globalStyleParent = this.styleElement.parentNode;
-        globalStyleParent.removeChild(this.styleElement);
-        
-        const originalComputed = window.getComputedStyle(current, null);
-        cursor = originalComputed.cursor;
-        globalStyleParent.appendChild(this.styleElement);
+
+      let cursor = window.getComputedStyle(current).cursor;
+
+      if (
+        cursor === 'none' &&
+        this.options.hideDefaultCursor &&
+        this.styleElement?.sheet
+      ) {
+        const sheet = this.styleElement.sheet;
+        sheet.disabled = true;
+        cursor = window.getComputedStyle(current).cursor;
+        sheet.disabled = false;
       }
-      
+
       const hasPointer = cursor === 'pointer';
       this.pointerElementsCache.set(current, hasPointer);
-      
+
       if (hasPointer) {
         return true;
       }
-      
+
       current = current.parentElement;
     }
-    
+
     return false;
   }
 
-  /**
-   * Checks if an element is interactive (clickable)
-   */
   private isInteractiveElement(element: HTMLElement): boolean {
-    if (!element || !(element instanceof HTMLElement)) {
+    if (!(element instanceof HTMLElement)) {
       return false;
     }
-    
-    if (this.hasPointerCursor(element)) {
+
+    const tag = element.tagName;
+    if (tag === 'A' || tag === 'BUTTON') {
       return true;
     }
-    
-    const inputElement = element.tagName === 'INPUT' ? (element as HTMLInputElement) : null;
-    const isInputRange = inputElement?.type === 'range';
-    const isInputColor = inputElement?.type === 'color';
-    const isInputCheckbox = inputElement?.type === 'checkbox';
-    const isInteractiveInput = isInputRange || isInputColor || isInputCheckbox;
-    
-    return (
-      element.tagName === 'A' ||
-      element.tagName === 'BUTTON' ||
-      element.getAttribute('role') === 'button' ||
-      element.onclick !== null ||
-      isInteractiveInput ||
-      element.closest('a, button, [role="button"], [onclick], input[type="range"], input[type="color"], input[type="checkbox"]') !== null
-    );
+
+    if (element.getAttribute('role') === 'button' || element.onclick !== null) {
+      return true;
+    }
+
+    if (tag === 'INPUT') {
+      const type = (element as HTMLInputElement).type;
+      if (type === 'range' || type === 'color' || type === 'checkbox') {
+        return true;
+      }
+    }
+
+    if (element.closest(INTERACTIVE_SELECTOR) !== null) {
+      return true;
+    }
+
+    return this.hasPointerCursor(element);
   }
 
-
-  /**
-   * Handles mouse leaving the window/document area
-   */
   private handleMouseLeave = (e: MouseEvent): void => {
     if (!e.relatedTarget || (e.relatedTarget as Node).nodeName === 'HTML') {
       this.isMouseInWindow = false;
@@ -721,37 +695,25 @@ export class AuraCursor {
     }
   };
 
-  /**
-   * Handles mouse entering the window/document area
-   */
   private handleMouseEnter = (): void => {
     this.isMouseInWindow = true;
     if (this.cursorElement) {
-      this.applyStyles();
+      this.applyVisualStyles();
     }
   };
 
-  /**
-   * Handles window blur (when window loses focus, e.g., mouse goes to address bar)
-   */
   private handleWindowBlur = (): void => {
     this.isMouseInWindow = false;
     this.hideCursor();
   };
 
-  /**
-   * Handles window focus (when window gains focus)
-   */
   private handleWindowFocus = (): void => {
     this.isMouseInWindow = true;
     if (this.cursorElement) {
-      this.applyStyles();
+      this.applyVisualStyles();
     }
   };
 
-  /**
-   * Hides the cursor
-   */
   private hideCursor(): void {
     if (this.cursorElement) {
       this.cursorElement.style.opacity = '0';
@@ -764,83 +726,69 @@ export class AuraCursor {
     }
   }
 
-  /**
-   * Handles mouse movement
-   */
   private handleMouseMove = (e: MouseEvent): void => {
-    if (typeof document !== 'undefined') {
-      const doc = document as Document & { __auraCursorLastMouseEvent?: MouseEvent };
-      doc.__auraCursorLastMouseEvent = e;
-    }
-    
+    (
+      document as Document & { __auraCursorLastMouseEvent?: MouseEvent }
+    ).__auraCursorLastMouseEvent = e;
+
     if (!this.isMouseInWindow) {
       return;
     }
 
-    if (this.cursorElement && this.cursorElement.style.opacity === '0') {
-      this.applyStyles();
+    this.targetX = e.clientX;
+    this.targetY = e.clientY;
+
+    if (this.options.outlineMode || this.options.hideDefaultCursor) {
+      this.centerDotX = e.clientX;
+      this.centerDotY = e.clientY;
+      if (this.options.outlineMode) {
+        this.updateCursorDotPosition();
+      }
+      if (this.options.hideDefaultCursor) {
+        this.updateCenterDotPosition();
+      }
     }
 
     const target = e.target;
-    if (!target || !(target instanceof HTMLElement)) {
-      return;
-    }
-    
-    const isInteractive = this.isInteractiveElement(target);
-    
-    const wasOnInteractive = this.isOnInteractiveElement;
-    this.isOnInteractiveElement = isInteractive;
-    
-    if (this.options.interactiveOnly) {
-      if (!isInteractive) {
-        if (wasOnInteractive && this.cursorElement) {
-          this.hideCursor();
+    const hasHtmlTarget = !!target && target instanceof HTMLElement;
+
+    if (hasHtmlTarget) {
+      const isInteractive = this.isInteractiveElement(target);
+      const wasOnInteractive = this.isOnInteractiveElement;
+      this.isOnInteractiveElement = isInteractive;
+
+      if (this.options.interactiveOnly) {
+        if (!isInteractive) {
+          if (wasOnInteractive) {
+            this.hideCursor();
+          }
+          return;
         }
-        return;
-      } else {
         if (!wasOnInteractive && this.cursorElement) {
-          this.applyStyles();
+          this.applyVisualStyles();
         }
+      } else if (this.cursorElement?.style.opacity === '0') {
+        this.applyVisualStyles();
       }
-    } else {
-      if (this.cursorElement && this.cursorElement.style.opacity === '0') {
-        this.applyStyles();
+
+      if (
+        this.isHoveringInteractive !== isInteractive ||
+        this.isPointer !== isInteractive
+      ) {
+        this.isHoveringInteractive = isInteractive;
+        this.isPointer = isInteractive;
+        this.applyVisualStyles();
       }
+    } else if (
+      !this.options.interactiveOnly &&
+      this.cursorElement?.style.opacity === '0'
+    ) {
+      this.applyVisualStyles();
     }
 
-    if (this.isHoveringInteractive !== isInteractive) {
-      this.isHoveringInteractive = isInteractive;
-      this.applyStyles();
-    }
-
-    if (this.options.hoverEffect) {
-      const isPointerElement = this.isInteractiveElement(target);
-
-      if (this.isPointer !== isPointerElement) {
-        this.isPointer = isPointerElement;
-        this.applyStyles();
-      }
-    }
-
-    this.targetX = e.clientX;
-    this.targetY = e.clientY;
-    
-    if (this.options.outlineMode) {
-      this.centerDotX = e.clientX;
-      this.centerDotY = e.clientY;
-      this.updateCursorDotPosition();
-    }
-    
-    if (this.options.hideDefaultCursor) {
-      this.centerDotX = e.clientX;
-      this.centerDotY = e.clientY;
-      this.updateCenterDotPosition();
-    }
+    this.startAnimation();
   };
 
-  /**
-   * Attaches event listeners
-   */
   private attachEventListeners(): void {
     window.addEventListener('mousemove', this.handleMouseMove);
     document.addEventListener('mouseleave', this.handleMouseLeave);
@@ -849,9 +797,6 @@ export class AuraCursor {
     window.addEventListener('focus', this.handleWindowFocus);
   }
 
-  /**
-   * Removes event listeners
-   */
   private removeEventListeners(): void {
     window.removeEventListener('mousemove', this.handleMouseMove);
     document.removeEventListener('mouseleave', this.handleMouseLeave);
@@ -860,9 +805,6 @@ export class AuraCursor {
     window.removeEventListener('focus', this.handleWindowFocus);
   }
 
-  /**
-   * Sets up resize listener to handle mobile/desktop transitions
-   */
   private setupResizeListener(): void {
     if (typeof window === 'undefined' || this.resizeHandler) {
       return;
@@ -873,11 +815,7 @@ export class AuraCursor {
         if (this.isActive) {
           this.removeEventListeners();
           this.removeCursorElement();
-          
-          if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
-          }
+          this.stopAnimation();
 
           if (this.options.hideDefaultCursor) {
             this.showDefaultCursor();
@@ -885,16 +823,14 @@ export class AuraCursor {
 
           this.isActive = false;
         }
-      } else {
-        if (!this.isActive) {
-          this.createCursorElement();
-          this.attachEventListeners();
-          this.animate();
-          this.isActive = true;
+      } else if (!this.isActive) {
+        this.createCursorElement();
+        this.attachEventListeners();
+        this.startAnimation();
+        this.isActive = true;
 
-          if (this.options.hideDefaultCursor) {
-            this.hideDefaultCursor();
-          }
+        if (this.options.hideDefaultCursor) {
+          this.hideDefaultCursor();
         }
       }
     };
@@ -903,9 +839,6 @@ export class AuraCursor {
     window.addEventListener('orientationchange', this.resizeHandler);
   }
 
-  /**
-   * Removes resize listener
-   */
   private removeResizeListener(): void {
     if (this.resizeHandler) {
       window.removeEventListener('resize', this.resizeHandler);
@@ -914,40 +847,16 @@ export class AuraCursor {
     }
   }
 
-  /**
-   * Removes the cursor element from the DOM
-   */
   private removeCursorElement(): void {
-    if (this.cursorElement) {
-      if (this.cursorElement.parentNode) {
-        this.cursorElement.parentNode.removeChild(this.cursorElement);
-      }
-      this.cursorElement = null;
-    }
-    if (this.cursorDot) {
-      if (this.cursorDot.parentNode) {
-        this.cursorDot.parentNode.removeChild(this.cursorDot);
-      }
-      this.cursorDot = null;
-    }
-    if (this.centerDot) {
-      if (this.centerDot.parentNode) {
-        this.centerDot.parentNode.removeChild(this.centerDot);
-      }
-      this.centerDot = null;
-    }
-    
-    const orphanedCursors = document.querySelectorAll('.aura-cursor, .aura-cursor-dot, .aura-cursor-center-dot');
-    orphanedCursors.forEach((element) => {
-      if (element.parentNode) {
-        element.parentNode.removeChild(element);
-      }
-    });
+    removeNode(this.cursorElement);
+    this.cursorElement = null;
+    removeNode(this.cursorDot);
+    this.cursorDot = null;
+    removeNode(this.centerDot);
+    this.centerDot = null;
+    removeOrphanedCursors();
   }
 
-  /**
-   * Hides the default cursor by adding a global style
-   */
   private hideDefaultCursor(): void {
     if (!this.styleElement) {
       this.styleElement = document.createElement('style');
@@ -958,15 +867,11 @@ export class AuraCursor {
     }
   }
 
-  /**
-   * Shows the default cursor by removing the global style
-   */
   private showDefaultCursor(): void {
-    if (this.styleElement && this.styleElement.parentNode) {
+    if (this.styleElement?.parentNode) {
       this.styleElement.parentNode.removeChild(this.styleElement);
       this.styleElement = null;
       this.pointerElementsCache = new WeakMap();
     }
   }
 }
-
