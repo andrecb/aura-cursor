@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-07-27
+
+### Changed
+- Optimized animation loop to pause `requestAnimationFrame` when the cursor is idle and resume on mouse move
+- Reduced DOM writes by separating static and dynamic styles and positioning with `translate3d`
+- Improved interactive element detection with cheaper checks before `getComputedStyle`
+- Avoided layout thrashing when reading cursor styles under `hideDefaultCursor` by toggling stylesheet `disabled` instead of removing the style node
+- Marked the package as `"sideEffects": false` to improve consumer tree-shaking
+- Reduced main bundle size (~13% smaller ESM build)
+
 ## [1.4.1] - 2025-12-08
 
 ### Fixed
