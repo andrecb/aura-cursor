@@ -209,4 +209,84 @@ describe('AuraCursor', () => {
       expect(cursorElement.style.opacity).toBe('0.5');
     });
   });
+
+  describe('v1.5 features', () => {
+    it('should not create trail elements by default', () => {
+      cursor = new AuraCursor();
+      cursor.init();
+      expect(document.querySelectorAll('.aura-cursor-trail').length).toBe(0);
+    });
+
+    it('should create trail elements when trail.length is set', () => {
+      cursor = new AuraCursor({ trail: { length: 4 } });
+      cursor.init();
+      expect(document.querySelectorAll('.aura-cursor-trail').length).toBe(4);
+    });
+
+    it('should remove trail elements on destroy', () => {
+      cursor = new AuraCursor({ trail: { length: 3 } });
+      cursor.init();
+      cursor.destroy();
+      expect(document.querySelectorAll('.aura-cursor-trail').length).toBe(0);
+    });
+
+    it('should apply square shape border radius', () => {
+      cursor = new AuraCursor({ shape: 'square' });
+      cursor.init();
+      const el = document.querySelector('.aura-cursor') as HTMLElement;
+      expect(el.style.borderRadius).toBe('0');
+    });
+
+    it('should apply mixBlendMode and blur', () => {
+      cursor = new AuraCursor({
+        mixBlendMode: 'difference',
+        blur: 2,
+      });
+      cursor.init();
+      const el = document.querySelector('.aura-cursor') as HTMLElement;
+      expect(el.style.mixBlendMode).toBe('difference');
+      expect(el.style.filter).toContain('blur(2px)');
+    });
+
+    it('should respect excludeSelector', async () => {
+      const link = document.createElement('a');
+      link.href = '#';
+      link.className = 'no-cursor';
+      link.textContent = 'Link';
+      document.body.appendChild(link);
+
+      const onHover = vi.fn();
+      cursor = new AuraCursor({
+        excludeSelector: '.no-cursor',
+        onHoverInteractive: onHover,
+      });
+      cursor.init();
+
+      link.dispatchEvent(
+        new MouseEvent('mousemove', {
+          clientX: 10,
+          clientY: 10,
+          bubbles: true,
+        })
+      );
+      window.dispatchEvent(
+        new MouseEvent('mousemove', {
+          clientX: 10,
+          clientY: 10,
+          bubbles: true,
+        })
+      );
+
+      await new Promise((resolve) => setTimeout(resolve, 10));
+      expect(onHover).not.toHaveBeenCalledWith(link);
+    });
+
+    it('should render customCursor HTML string', () => {
+      cursor = new AuraCursor({
+        customCursor: '<span class="custom-mark">+</span>',
+      });
+      cursor.init();
+      expect(document.querySelector('.aura-cursor .custom-mark')).toBeTruthy();
+    });
+  });
 });

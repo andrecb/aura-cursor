@@ -471,6 +471,87 @@
                 Interactive Only
               </label>
             </div>
+
+            <div class="control-group">
+              <label for="lag">Lag</label>
+              <input
+                type="range"
+                id="lag"
+                min="0.5"
+                max="4"
+                step="0.1"
+                value="1"
+              />
+              <span class="value-display" id="lagValue">1</span>
+            </div>
+
+            <div class="control-group">
+              <label for="easing">Easing</label>
+              <select id="easing">
+                <option value="linear" selected>linear</option>
+                <option value="easeOut">easeOut</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="shape">Shape</label>
+              <select id="shape">
+                <option value="circle" selected>circle</option>
+                <option value="square">square</option>
+                <option value="rounded">rounded</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="trailLength">Trail Length</label>
+              <input
+                type="range"
+                id="trailLength"
+                min="0"
+                max="12"
+                step="1"
+                value="0"
+              />
+              <span class="value-display" id="trailLengthValue">0</span>
+            </div>
+
+            <div class="control-group">
+              <label for="clickEffect">
+                <input type="checkbox" id="clickEffect" />
+                Click Effect
+              </label>
+            </div>
+
+            <div class="control-group">
+              <label for="magnetic">
+                <input type="checkbox" id="magnetic" />
+                Magnetic Snap
+              </label>
+            </div>
+
+            <div class="control-group">
+              <label for="mixBlendMode">Mix Blend Mode</label>
+              <select id="mixBlendMode">
+                <option value="" selected>normal</option>
+                <option value="difference">difference</option>
+                <option value="exclusion">exclusion</option>
+                <option value="multiply">multiply</option>
+                <option value="screen">screen</option>
+              </select>
+            </div>
+
+            <div class="control-group">
+              <label for="blur">Blur (px)</label>
+              <input
+                type="range"
+                id="blur"
+                min="0"
+                max="8"
+                step="0.5"
+                value="0"
+              />
+              <span class="value-display" id="blurValue">0</span>
+            </div>
           </div>
         </div>
 
@@ -710,6 +791,17 @@
       const colorInput = document.getElementById('color');
       const hideDefaultInput = document.getElementById('hideDefault');
       const interactiveOnlyInput = document.getElementById('interactiveOnly');
+      const lagInput = document.getElementById('lag');
+      const lagValue = document.getElementById('lagValue');
+      const easingInput = document.getElementById('easing');
+      const shapeInput = document.getElementById('shape');
+      const trailLengthInput = document.getElementById('trailLength');
+      const trailLengthValue = document.getElementById('trailLengthValue');
+      const clickEffectInput = document.getElementById('clickEffect');
+      const magneticInput = document.getElementById('magnetic');
+      const mixBlendModeInput = document.getElementById('mixBlendMode');
+      const blurInput = document.getElementById('blur');
+      const blurValue = document.getElementById('blurValue');
       const initBtn = document.getElementById('initBtn');
       const destroyBtn = document.getElementById('destroyBtn');
 
@@ -757,6 +849,86 @@
           cursor.updateOptions({ speed: parseFloat(e.target.value) });
         }
       });
+
+      if (lagInput && lagValue) {
+        lagInput.addEventListener('input', (e) => {
+          lagValue.textContent = e.target.value;
+          if (cursor) {
+            cursor.updateOptions({ lag: parseFloat(e.target.value) });
+          }
+        });
+      }
+
+      if (easingInput) {
+        easingInput.addEventListener('change', () => {
+          if (cursor) {
+            cursor.updateOptions({ easing: easingInput.value });
+          }
+        });
+      }
+
+      if (shapeInput) {
+        shapeInput.addEventListener('change', () => {
+          if (cursor) {
+            cursor.destroy();
+            initCursor();
+          }
+        });
+      }
+
+      if (trailLengthInput && trailLengthValue) {
+        trailLengthInput.addEventListener('input', (e) => {
+          trailLengthValue.textContent = e.target.value;
+          if (cursor) {
+            cursor.updateOptions({
+              trail: { length: parseInt(e.target.value, 10) },
+            });
+          }
+        });
+      }
+
+      if (clickEffectInput) {
+        clickEffectInput.addEventListener('change', () => {
+          if (cursor) {
+            cursor.updateOptions({
+              clickEffect: clickEffectInput.checked
+                ? { scale: 0.75, duration: 150 }
+                : false,
+            });
+          }
+        });
+      }
+
+      if (magneticInput) {
+        magneticInput.addEventListener('change', () => {
+          if (cursor) {
+            cursor.updateOptions({
+              magnetic: magneticInput.checked
+                ? { strength: 0.4, padding: 48 }
+                : false,
+            });
+          }
+        });
+      }
+
+      if (mixBlendModeInput) {
+        mixBlendModeInput.addEventListener('change', () => {
+          if (cursor) {
+            cursor.updateOptions({
+              mixBlendMode: mixBlendModeInput.value || undefined,
+            });
+          }
+        });
+      }
+
+      if (blurInput && blurValue) {
+        blurInput.addEventListener('input', (e) => {
+          blurValue.textContent = e.target.value;
+          if (cursor) {
+            cursor.updateOptions({ blur: parseFloat(e.target.value) });
+          }
+        });
+      }
 
       colorInput.addEventListener('input', (e) => {
         if (cursor) {
@@ -854,14 +1026,28 @@
           color: colorInput.value,
           opacity: parseFloat(opacityInput.value),
           speed: parseFloat(speedInput.value),
-        hideDefaultCursor: hideDefaultInput.checked,
-        interactiveOnly: interactiveOnlyInput.checked,
-        outlineMode: outlineModeInput.checked,
-        outlineWidth: outlineWidthInput ? parseInt(outlineWidthInput.value) : 2,
-        centerDotColor: centerDotColorInput ? centerDotColorInput.value : undefined,
-        centerDotHoverColor: centerDotHoverColorInput ? centerDotHoverColorInput.value : undefined,
-        centerDotSize: centerDotSizeInput ? parseInt(centerDotSizeInput.value) : 3,
-      };
+          lag: lagInput ? parseFloat(lagInput.value) : 1,
+          easing: easingInput ? easingInput.value : 'linear',
+          shape: shapeInput ? shapeInput.value : 'circle',
+          trail: {
+            length: trailLengthInput ? parseInt(trailLengthInput.value, 10) : 0,
+          },
+          clickEffect: clickEffectInput?.checked
+            ? { scale: 0.75, duration: 150 }
+            : false,
+          magnetic: magneticInput?.checked
+            ? { strength: 0.4, padding: 48 }
+            : false,
+          mixBlendMode: mixBlendModeInput?.value || undefined,
+          blur: blurInput ? parseFloat(blurInput.value) : 0,
+          hideDefaultCursor: hideDefaultInput.checked,
+          interactiveOnly: interactiveOnlyInput.checked,
+          outlineMode: outlineModeInput.checked,
+          outlineWidth: outlineWidthInput ? parseInt(outlineWidthInput.value) : 2,
+          centerDotColor: centerDotColorInput ? centerDotColorInput.value : undefined,
+          centerDotHoverColor: centerDotHoverColorInput ? centerDotHoverColorInput.value : undefined,
+          centerDotSize: centerDotSizeInput ? parseInt(centerDotSizeInput.value) : 3,
+        };
 
         options.hoverEffect = {
           color: pointerColorInput.value,

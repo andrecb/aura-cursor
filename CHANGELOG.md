@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-07-27
+
+### Added
+- `lag` and `easing` options for finer control over follow delay and interpolation
+- Visual `trail` ghosts behind the cursor (`length`, `fade`, `scale`)
+- `clickEffect` scale pulse on mouse down/up
+- Advanced style options: `mixBlendMode`, `blur`, `zIndex`, `borderRadius`
+- `shape` (`circle` | `square` | `rounded`) and `customCursor` HTML content
+- `magnetic` snap toward interactive element centers
+- `interactiveSelector` and `excludeSelector` for custom interactive targeting
+- `onHoverInteractive` and `onClick` callbacks
+
 ## [1.4.2] - 2026-07-27
 
 ### Changed

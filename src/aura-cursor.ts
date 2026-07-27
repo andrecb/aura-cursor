@@ -1,98 +1,58 @@
 export interface AuraCursorHoverEffectOptions {
-  /**
-   * Circle color when hovering over interactive elements
-   * @default undefined (uses default color or hoverColor)
-   */
   color?: string;
-  /**
-   * Circle opacity when hovering over interactive elements (0 to 1)
-   * @default undefined (uses default opacity)
-   */
   opacity?: number;
-  /**
-   * Scale multiplier when hovering over interactive elements
-   * Multiplies the base size (e.g., 1.5 = 150% of base size)
-   * @default 1.5
-   */
   scale?: number;
 }
 
+export interface AuraCursorTrailOptions {
+  length?: number;
+  fade?: number;
+  scale?: number;
+}
+
+export interface AuraCursorClickEffectOptions {
+  scale?: number;
+  duration?: number;
+}
+
+export interface AuraCursorMagneticOptions {
+  strength?: number;
+  padding?: number;
+}
+
+export type AuraCursorShape = 'circle' | 'square' | 'rounded';
+export type AuraCursorEasing = 'linear' | 'easeOut';
+
 export interface AuraCursorOptions {
-  /**
-   * Circle size in pixels
-   * @default 20
-   */
   size?: number;
-  /**
-   * Circle color
-   * @default '#000000'
-   */
   color?: string;
-  /**
-   * Circle opacity (0 to 1)
-   * @default 0.5
-   */
   opacity?: number;
-  /**
-   * Mouse follow speed (0 to 1)
-   * Higher values make the circle follow the mouse faster
-   * @default 0.3
-   */
   speed?: number;
-  /**
-   * Whether to hide the default cursor
-   * @default false
-   */
+  lag?: number;
+  easing?: AuraCursorEasing;
   hideDefaultCursor?: boolean;
-  /**
-   * Additional CSS class for the cursor element
-   * @default ''
-   */
   className?: string;
-  /**
-   * Whether to apply the cursor only on interactive elements (links, buttons, etc)
-   * @default false
-   */
   interactiveOnly?: boolean;
-  /**
-   * Options for hover effects when cursor is over interactive elements (links, buttons, etc)
-   * @default undefined (no special styling)
-   */
   hoverEffect?: AuraCursorHoverEffectOptions;
-  /**
-   * Show cursor as outline (border only) with center dot
-   * @default false
-   */
   outlineMode?: boolean;
-  /**
-   * Border width in pixels when outline mode is enabled
-   * @default 2
-   */
   outlineWidth?: number;
-  /**
-   * Color for the center dot in outline mode or when hideDefaultCursor is enabled
-   * If not provided, uses the primary color
-   * @default undefined (uses primary color)
-   */
   centerDotColor?: string;
-  /**
-   * Color when hovering over interactive elements
-   * If not provided, uses the primary color or hoverEffect color
-   * @default undefined (uses primary color or hoverEffect color)
-   */
   hoverColor?: string;
-  /**
-   * Size of the center dot in pixels when hideDefaultCursor is enabled or in outline mode
-   * @default 3
-   */
   centerDotSize?: number;
-  /**
-   * Color for the center dot when hovering over interactive elements
-   * Works in both outline mode and when hideDefaultCursor is enabled
-   * If not provided, uses centerDotColor or the primary color
-   * @default undefined (uses centerDotColor or primary color)
-   */
   centerDotHoverColor?: string;
+  trail?: AuraCursorTrailOptions;
+  clickEffect?: boolean | AuraCursorClickEffectOptions;
+  mixBlendMode?: string;
+  blur?: number;
+  zIndex?: number;
+  borderRadius?: string | number;
+  magnetic?: boolean | AuraCursorMagneticOptions;
+  shape?: AuraCursorShape;
+  customCursor?: HTMLElement | string;
+  interactiveSelector?: string;
+  excludeSelector?: string;
+  onHoverInteractive?: (el: HTMLElement | null) => void;
+  onClick?: (el: HTMLElement | null, event: MouseEvent) => void;
 }
 
 type AuraCursorResolvedOptions = Required<
@@ -103,6 +63,17 @@ type AuraCursorResolvedOptions = Required<
     | 'hoverColor'
     | 'centerDotSize'
     | 'centerDotHoverColor'
+    | 'trail'
+    | 'clickEffect'
+    | 'mixBlendMode'
+    | 'blur'
+    | 'borderRadius'
+    | 'magnetic'
+    | 'customCursor'
+    | 'interactiveSelector'
+    | 'excludeSelector'
+    | 'onHoverInteractive'
+    | 'onClick'
   >
 > & {
   centerDotColor?: string;
@@ -110,15 +81,27 @@ type AuraCursorResolvedOptions = Required<
   centerDotSize?: number;
   centerDotHoverColor?: string;
   hoverEffect?: AuraCursorHoverEffectOptions;
+  trail?: AuraCursorTrailOptions;
+  clickEffect?: boolean | AuraCursorClickEffectOptions;
+  mixBlendMode?: string;
+  blur?: number;
+  borderRadius?: string | number;
+  magnetic?: boolean | AuraCursorMagneticOptions;
+  customCursor?: HTMLElement | string;
+  interactiveSelector?: string;
+  excludeSelector?: string;
+  onHoverInteractive?: (el: HTMLElement | null) => void;
+  onClick?: (el: HTMLElement | null, event: MouseEvent) => void;
 };
 
-const INTERACTIVE_SELECTOR =
+const DEFAULT_INTERACTIVE_SELECTOR =
   'a, button, [role="button"], [onclick], input[type="range"], input[type="color"], input[type="checkbox"]';
-const CURSOR_SELECTOR = '.aura-cursor, .aura-cursor-dot, .aura-cursor-center-dot';
+const CURSOR_SELECTOR =
+  '.aura-cursor, .aura-cursor-dot, .aura-cursor-center-dot, .aura-cursor-trail';
 const IDLE_EPSILON_SQ = 0.01;
 const FAST_DISTANCE_SQ = 2500;
 const CURSOR_TRANSITION =
-  'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, opacity 0.3s ease, border 0.3s ease';
+  'width 0.4s cubic-bezier(0.4, 0, 0.2, 1), height 0.4s cubic-bezier(0.4, 0, 0.2, 1), border-radius 0.4s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.3s ease, opacity 0.3s ease, border 0.3s ease, filter 0.3s ease';
 
 function removeNode(node: Element | null): void {
   node?.parentNode?.removeChild(node);
@@ -128,10 +111,24 @@ function removeOrphanedCursors(): void {
   document.querySelectorAll(CURSOR_SELECTOR).forEach(removeNode);
 }
 
+function resolveBorderRadius(
+  shape: AuraCursorShape,
+  borderRadius?: string | number
+): string {
+  if (borderRadius !== undefined) {
+    return typeof borderRadius === 'number' ? `${borderRadius}px` : borderRadius;
+  }
+  if (shape === 'square') return '0';
+  if (shape === 'rounded') return '8px';
+  return '50%';
+}
+
 export class AuraCursor {
   private cursorElement: HTMLDivElement | null = null;
   private cursorDot: HTMLDivElement | null = null;
   private centerDot: HTMLDivElement | null = null;
+  private trailElements: HTMLDivElement[] = [];
+  private trailPositions: Array<{ x: number; y: number }> = [];
   private styleElement: HTMLStyleElement | null = null;
   private currentX = 0;
   private currentY = 0;
@@ -142,23 +139,55 @@ export class AuraCursor {
   private outlineCircleX = 0;
   private outlineCircleY = 0;
   private currentScale = 1;
+  private clickScale = 1;
+  private clickTimeout: ReturnType<typeof setTimeout> | null = null;
+  private isClicking = false;
   private animationFrameId: number | null = null;
   private isActive = false;
   private isPointer = false;
   private isHoveringInteractive = false;
   private isOnInteractiveElement = false;
   private isMouseInWindow = true;
+  private lastHoveredElement: HTMLElement | null = null;
   private options: AuraCursorResolvedOptions;
-  private baseOptions: Omit<AuraCursorResolvedOptions, 'hoverEffect'>;
+  private baseOptions: Omit<
+    AuraCursorResolvedOptions,
+    | 'hoverEffect'
+    | 'trail'
+    | 'clickEffect'
+    | 'magnetic'
+    | 'customCursor'
+    | 'onHoverInteractive'
+    | 'onClick'
+  > & {
+    trail?: AuraCursorTrailOptions;
+    clickEffect?: boolean | AuraCursorClickEffectOptions;
+    magnetic?: boolean | AuraCursorMagneticOptions;
+    customCursor?: HTMLElement | string;
+    onHoverInteractive?: (el: HTMLElement | null) => void;
+    onClick?: (el: HTMLElement | null, event: MouseEvent) => void;
+  };
   private pointerElementsCache: WeakMap<HTMLElement, boolean> = new WeakMap();
   private resizeHandler: (() => void) | null = null;
 
   constructor(options: AuraCursorOptions = {}) {
-    this.baseOptions = {
+    this.baseOptions = this.resolveBaseOptions(options);
+    this.options = {
+      ...this.baseOptions,
+      hoverEffect: options.hoverEffect,
+    };
+  }
+
+  private resolveBaseOptions(
+    options: AuraCursorOptions
+  ): AuraCursor['baseOptions'] {
+    return {
       size: options.size ?? 20,
       color: options.color ?? '#000000',
       opacity: options.opacity ?? 0.5,
       speed: options.speed ?? 0.3,
+      lag: options.lag ?? 1,
+      easing: options.easing ?? 'linear',
       hideDefaultCursor: options.hideDefaultCursor ?? false,
       className: options.className ?? '',
       interactiveOnly: options.interactiveOnly ?? false,
@@ -168,10 +197,19 @@ export class AuraCursor {
       hoverColor: options.hoverColor,
       centerDotSize: options.centerDotSize ?? 3,
       centerDotHoverColor: options.centerDotHoverColor,
-    };
-    this.options = {
-      ...this.baseOptions,
-      hoverEffect: options.hoverEffect,
+      mixBlendMode: options.mixBlendMode,
+      blur: options.blur,
+      zIndex: options.zIndex ?? 9999,
+      borderRadius: options.borderRadius,
+      shape: options.shape ?? 'circle',
+      interactiveSelector: options.interactiveSelector,
+      excludeSelector: options.excludeSelector,
+      trail: options.trail,
+      clickEffect: options.clickEffect,
+      magnetic: options.magnetic,
+      customCursor: options.customCursor,
+      onHoverInteractive: options.onHoverInteractive,
+      onClick: options.onClick,
     };
   }
 
@@ -229,6 +267,10 @@ export class AuraCursor {
     this.removeResizeListener();
     this.removeCursorElement();
     this.stopAnimation();
+    if (this.clickTimeout) {
+      clearTimeout(this.clickTimeout);
+      this.clickTimeout = null;
+    }
 
     if (this.options.hideDefaultCursor) {
       this.showDefaultCursor();
@@ -248,29 +290,18 @@ export class AuraCursor {
     const outlineModeChanged =
       options.outlineMode !== undefined &&
       options.outlineMode !== this.baseOptions.outlineMode;
+    const shapeChanged =
+      options.shape !== undefined && options.shape !== this.baseOptions.shape;
+    const customChanged = options.customCursor !== undefined;
+    const trailChanged = options.trail !== undefined;
 
-    if (options.size !== undefined) this.baseOptions.size = options.size;
-    if (options.color !== undefined) this.baseOptions.color = options.color;
-    if (options.opacity !== undefined) this.baseOptions.opacity = options.opacity;
-    if (options.speed !== undefined) this.baseOptions.speed = options.speed;
-    if (options.hideDefaultCursor !== undefined)
-      this.baseOptions.hideDefaultCursor = options.hideDefaultCursor;
-    if (options.className !== undefined)
-      this.baseOptions.className = options.className;
-    if (options.interactiveOnly !== undefined)
-      this.baseOptions.interactiveOnly = options.interactiveOnly;
-    if (options.outlineMode !== undefined)
-      this.baseOptions.outlineMode = options.outlineMode;
-    if (options.outlineWidth !== undefined)
-      this.baseOptions.outlineWidth = options.outlineWidth;
-    if (options.centerDotColor !== undefined)
-      this.baseOptions.centerDotColor = options.centerDotColor;
-    if (options.hoverColor !== undefined)
-      this.baseOptions.hoverColor = options.hoverColor;
-    if (options.centerDotSize !== undefined)
-      this.baseOptions.centerDotSize = options.centerDotSize;
-    if (options.centerDotHoverColor !== undefined)
-      this.baseOptions.centerDotHoverColor = options.centerDotHoverColor;
+    const keys = Object.keys(options) as (keyof AuraCursorOptions)[];
+    for (const key of keys) {
+      if (key === 'hoverEffect') continue;
+      if (options[key] !== undefined) {
+        (this.baseOptions as Record<string, unknown>)[key] = options[key];
+      }
+    }
 
     this.options = {
       ...this.baseOptions,
@@ -281,10 +312,14 @@ export class AuraCursor {
       return;
     }
 
-    if (outlineModeChanged) {
+    if (outlineModeChanged || shapeChanged || customChanged) {
       this.removeCursorElement();
       this.createCursorElement();
       return;
+    }
+
+    if (trailChanged) {
+      this.setupTrailElements();
     }
 
     if (hideDefaultCursorChanged) {
@@ -296,6 +331,7 @@ export class AuraCursor {
         this.cursorElement.className =
           `aura-cursor ${this.options.className}`.trim();
       }
+      this.applyCursorBaseStyles();
       this.applyVisualStyles();
     }
   }
@@ -335,15 +371,63 @@ export class AuraCursor {
     }
   }
 
+  private getTrailLength(): number {
+    return Math.max(0, this.options.trail?.length ?? 0);
+  }
+
+  private setupTrailElements(): void {
+    this.clearTrailElements();
+    const length = this.getTrailLength();
+    if (length === 0 || !this.cursorElement) return;
+
+    const x = this.options.outlineMode ? this.outlineCircleX : this.currentX;
+    const y = this.options.outlineMode ? this.outlineCircleY : this.currentY;
+
+    for (let i = 0; i < length; i++) {
+      const el = document.createElement('div');
+      el.className = 'aura-cursor-trail';
+      document.body.appendChild(el);
+      this.applyTrailBaseStyles(el);
+      this.trailElements.push(el);
+      this.trailPositions.push({ x, y });
+    }
+  }
+
+  private clearTrailElements(): void {
+    this.trailElements.forEach(removeNode);
+    this.trailElements = [];
+    this.trailPositions = [];
+  }
+
+  private applyTrailBaseStyles(el: HTMLDivElement): void {
+    const style = el.style;
+    style.position = 'fixed';
+    style.left = '0px';
+    style.top = '0px';
+    style.pointerEvents = 'none';
+    style.zIndex = String((this.baseOptions.zIndex ?? 9999) - 1);
+    style.margin = '0';
+    style.padding = '0';
+    style.display = 'block';
+    style.willChange = 'transform, opacity';
+    style.borderRadius = resolveBorderRadius(
+      this.baseOptions.shape,
+      this.baseOptions.borderRadius
+    );
+  }
+
   private createCursorElement(): void {
     removeOrphanedCursors();
     this.cursorElement = null;
     this.cursorDot = null;
     this.centerDot = null;
+    this.trailElements = [];
+    this.trailPositions = [];
 
     this.cursorElement = document.createElement('div');
     this.cursorElement.className =
       `aura-cursor ${this.options.className}`.trim();
+    this.applyCustomCursorContent();
     this.applyCursorBaseStyles();
     this.applyVisualStyles();
     document.body.appendChild(this.cursorElement);
@@ -355,6 +439,8 @@ export class AuraCursor {
       this.ensureCenterDot();
       this.applyVisualStyles();
     }
+
+    this.setupTrailElements();
 
     let initialX = window.innerWidth / 2;
     let initialY = window.innerHeight / 2;
@@ -386,15 +472,31 @@ export class AuraCursor {
     this.updateCursorDotPosition();
   }
 
+  private applyCustomCursorContent(): void {
+    if (!this.cursorElement) return;
+    const custom = this.baseOptions.customCursor;
+    this.cursorElement.innerHTML = '';
+    if (!custom) return;
+
+    if (typeof custom === 'string') {
+      this.cursorElement.innerHTML = custom;
+    } else if (custom instanceof HTMLElement) {
+      this.cursorElement.appendChild(custom.cloneNode(true));
+    }
+  }
+
   private applyCursorBaseStyles(): void {
     if (!this.cursorElement) return;
     const style = this.cursorElement.style;
     style.position = 'fixed';
     style.left = '0px';
     style.top = '0px';
-    style.borderRadius = '50%';
+    style.borderRadius = resolveBorderRadius(
+      this.baseOptions.shape,
+      this.baseOptions.borderRadius
+    );
     style.pointerEvents = 'none';
-    style.zIndex = '9999';
+    style.zIndex = String(this.baseOptions.zIndex ?? 9999);
     style.boxShadow = 'none';
     style.outline = 'none';
     style.margin = '0';
@@ -402,11 +504,17 @@ export class AuraCursor {
     style.display = 'block';
     style.willChange = 'transform';
     style.transition = CURSOR_TRANSITION;
+    style.mixBlendMode = this.baseOptions.mixBlendMode || 'normal';
+    style.filter =
+      this.baseOptions.blur && this.baseOptions.blur > 0
+        ? `blur(${this.baseOptions.blur}px)`
+        : 'none';
   }
 
   private applyCursorDotBaseStyles(): void {
     if (!this.cursorDot) return;
     const style = this.cursorDot.style;
+    const z = (this.baseOptions.zIndex ?? 9999) + 2;
     style.position = 'fixed';
     style.left = '0px';
     style.top = '0px';
@@ -415,7 +523,7 @@ export class AuraCursor {
     style.outline = '0';
     style.boxShadow = 'none';
     style.opacity = '1';
-    style.zIndex = '10001';
+    style.zIndex = String(z);
     style.pointerEvents = 'none';
     style.margin = '0';
     style.padding = '0';
@@ -427,6 +535,7 @@ export class AuraCursor {
   private applyCenterDotBaseStyles(): void {
     if (!this.centerDot) return;
     const style = this.centerDot.style;
+    const z = (this.baseOptions.zIndex ?? 9999) + 1;
     style.position = 'fixed';
     style.left = '0px';
     style.top = '0px';
@@ -435,7 +544,7 @@ export class AuraCursor {
     style.outline = 'none';
     style.boxShadow = 'none';
     style.opacity = '1';
-    style.zIndex = '10000';
+    style.zIndex = String(z);
     style.pointerEvents = 'none';
     style.margin = '0';
     style.padding = '0';
@@ -444,11 +553,16 @@ export class AuraCursor {
     style.transition = 'background-color 0.3s ease';
   }
 
+  private getEffectiveScale(): number {
+    return this.currentScale * this.clickScale;
+  }
+
   private applyVisualStyles(): void {
     if (!this.cursorElement) return;
 
     const size = this.baseOptions.size;
     const hovering = this.isHoveringInteractive || this.isPointer;
+    const hasCustom = !!this.baseOptions.customCursor;
 
     let color = this.baseOptions.color;
     if (hovering) {
@@ -469,12 +583,25 @@ export class AuraCursor {
         ? this.options.hoverEffect.scale
         : 1;
 
-    const displaySize = size * this.currentScale;
+    const displaySize = size * this.getEffectiveScale();
     const style = this.cursorElement.style;
     style.width = `${displaySize}px`;
     style.height = `${displaySize}px`;
+    style.borderRadius = resolveBorderRadius(
+      this.baseOptions.shape,
+      this.baseOptions.borderRadius
+    );
+    style.mixBlendMode = this.baseOptions.mixBlendMode || 'normal';
+    style.filter =
+      this.baseOptions.blur && this.baseOptions.blur > 0
+        ? `blur(${this.baseOptions.blur}px)`
+        : 'none';
 
-    if (this.options.outlineMode) {
+    if (hasCustom) {
+      style.backgroundColor = 'transparent';
+      style.border = 'none';
+      style.opacity = String(opacity);
+    } else if (this.options.outlineMode) {
       style.backgroundColor = 'transparent';
       style.border = `${this.options.outlineWidth}px solid ${color}`;
       style.opacity = String(opacity);
@@ -523,6 +650,44 @@ export class AuraCursor {
     }
 
     this.updateCursorPosition();
+    this.updateTrailStyles();
+  }
+
+  private updateTrailStyles(): void {
+    if (this.trailElements.length === 0) return;
+
+    const size = this.baseOptions.size;
+    const fade = this.options.trail?.fade ?? 0.6;
+    const trailScale = this.options.trail?.scale ?? 0.95;
+    const hovering = this.isHoveringInteractive || this.isPointer;
+    let color = this.baseOptions.color;
+    if (hovering) {
+      color =
+        this.baseOptions.hoverColor ||
+        this.options.hoverEffect?.color ||
+        this.baseOptions.color;
+    }
+    const baseOpacity = this.baseOptions.opacity;
+
+    this.trailElements.forEach((el, i) => {
+      const t = (i + 1) / (this.trailElements.length + 1);
+      const scale = Math.pow(trailScale, i + 1) * this.getEffectiveScale();
+      const displaySize = size * scale;
+      el.style.width = `${displaySize}px`;
+      el.style.height = `${displaySize}px`;
+      el.style.backgroundColor = this.options.outlineMode
+        ? 'transparent'
+        : color;
+      el.style.border = this.options.outlineMode
+        ? `${this.options.outlineWidth}px solid ${color}`
+        : 'none';
+      el.style.opacity = String(baseOpacity * fade * (1 - t));
+      el.style.borderRadius = resolveBorderRadius(
+        this.baseOptions.shape,
+        this.baseOptions.borderRadius
+      );
+      el.style.mixBlendMode = this.baseOptions.mixBlendMode || 'normal';
+    });
   }
 
   private updateCursorPosition(): void {
@@ -531,6 +696,26 @@ export class AuraCursor {
     const x = this.options.outlineMode ? this.outlineCircleX : this.currentX;
     const y = this.options.outlineMode ? this.outlineCircleY : this.currentY;
     this.cursorElement.style.transform = `translate3d(${x}px, ${y}px, 0) translate(-50%, -50%)`;
+  }
+
+  private updateTrailPositions(): void {
+    if (this.trailElements.length === 0) return;
+
+    const x = this.options.outlineMode ? this.outlineCircleX : this.currentX;
+    const y = this.options.outlineMode ? this.outlineCircleY : this.currentY;
+
+    for (let i = this.trailPositions.length - 1; i > 0; i--) {
+      this.trailPositions[i] = { ...this.trailPositions[i - 1] };
+    }
+    if (this.trailPositions.length > 0) {
+      this.trailPositions[0] = { x, y };
+    }
+
+    this.trailElements.forEach((el, i) => {
+      const pos = this.trailPositions[i];
+      if (!pos) return;
+      el.style.transform = `translate3d(${pos.x}px, ${pos.y}px, 0) translate(-50%, -50%)`;
+    });
   }
 
   private updateCenterDotPosition(): void {
@@ -562,6 +747,19 @@ export class AuraCursor {
     }
   }
 
+  private getLerpFactor(distSq: number, baseSpeed: number): number {
+    const lag = Math.max(0.05, this.options.lag || 1);
+    let speed = baseSpeed / lag;
+    if (distSq > FAST_DISTANCE_SQ) {
+      speed = Math.min(speed * 2, 0.8);
+    }
+    if (this.options.easing === 'easeOut') {
+      const t = Math.min(1, Math.sqrt(distSq) / 200);
+      speed = speed * (0.35 + 0.65 * t);
+    }
+    return Math.min(Math.max(speed, 0.01), 1);
+  }
+
   private animate = (): void => {
     let settled = false;
 
@@ -578,11 +776,9 @@ export class AuraCursor {
         this.outlineCircleY = this.targetY;
         settled = true;
       } else {
-        const baseSpeed = this.options.speed * 0.5;
-        const adaptiveSpeed =
-          distSq > FAST_DISTANCE_SQ ? Math.min(baseSpeed * 2, 0.8) : baseSpeed;
-        this.outlineCircleX += dx * adaptiveSpeed;
-        this.outlineCircleY += dy * adaptiveSpeed;
+        const factor = this.getLerpFactor(distSq, this.options.speed * 0.5);
+        this.outlineCircleX += dx * factor;
+        this.outlineCircleY += dy * factor;
       }
 
       this.updateCursorPosition();
@@ -597,26 +793,69 @@ export class AuraCursor {
         this.currentY = this.targetY;
         settled = true;
       } else {
-        const adaptiveSpeed =
-          distSq > FAST_DISTANCE_SQ
-            ? Math.min(this.options.speed * 2, 0.8)
-            : this.options.speed;
-        this.currentX += dx * adaptiveSpeed;
-        this.currentY += dy * adaptiveSpeed;
+        const factor = this.getLerpFactor(distSq, this.options.speed);
+        this.currentX += dx * factor;
+        this.currentY += dy * factor;
       }
 
       this.updateCursorPosition();
     }
 
     this.updateCenterDotPosition();
+    this.updateTrailPositions();
 
-    if (settled) {
+    if (settled && this.trailElements.length === 0 && !this.isClicking) {
       this.animationFrameId = null;
       return;
     }
 
     this.animationFrameId = requestAnimationFrame(this.animate);
   };
+
+  private getMagneticConfig(): AuraCursorMagneticOptions | null {
+    const magnetic = this.options.magnetic;
+    if (!magnetic) return null;
+    if (magnetic === true) return { strength: 0.35, padding: 40 };
+    return {
+      strength: magnetic.strength ?? 0.35,
+      padding: magnetic.padding ?? 40,
+    };
+  }
+
+  private applyMagnetic(
+    clientX: number,
+    clientY: number,
+    element: HTMLElement
+  ): { x: number; y: number } {
+    const config = this.getMagneticConfig();
+    if (!config) return { x: clientX, y: clientY };
+
+    const rect = element.getBoundingClientRect();
+    const padding = config.padding ?? 40;
+    const expanded = {
+      left: rect.left - padding,
+      right: rect.right + padding,
+      top: rect.top - padding,
+      bottom: rect.bottom + padding,
+    };
+
+    if (
+      clientX < expanded.left ||
+      clientX > expanded.right ||
+      clientY < expanded.top ||
+      clientY > expanded.bottom
+    ) {
+      return { x: clientX, y: clientY };
+    }
+
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const strength = Math.min(Math.max(config.strength ?? 0.35, 0), 1);
+    return {
+      x: clientX + (cx - clientX) * strength,
+      y: clientY + (cy - clientY) * strength,
+    };
+  }
 
   private hasPointerCursor(element: HTMLElement): boolean {
     let current: HTMLElement | null = element;
@@ -660,9 +899,37 @@ export class AuraCursor {
     return false;
   }
 
+  private isExcluded(element: HTMLElement): boolean {
+    const exclude = this.options.excludeSelector;
+    if (!exclude) return false;
+    try {
+      return element.matches(exclude) || element.closest(exclude) !== null;
+    } catch {
+      return false;
+    }
+  }
+
   private isInteractiveElement(element: HTMLElement): boolean {
     if (!(element instanceof HTMLElement)) {
       return false;
+    }
+
+    if (this.isExcluded(element)) {
+      return false;
+    }
+
+    const customSelector = this.options.interactiveSelector;
+    if (customSelector) {
+      try {
+        if (
+          element.matches(customSelector) ||
+          element.closest(customSelector) !== null
+        ) {
+          return true;
+        }
+      } catch {
+        // invalid selector — fall through to defaults
+      }
     }
 
     const tag = element.tagName;
@@ -681,12 +948,55 @@ export class AuraCursor {
       }
     }
 
-    if (element.closest(INTERACTIVE_SELECTOR) !== null) {
+    if (element.closest(DEFAULT_INTERACTIVE_SELECTOR) !== null) {
       return true;
     }
 
     return this.hasPointerCursor(element);
   }
+
+  private getClickEffect(): AuraCursorClickEffectOptions | null {
+    const effect = this.options.clickEffect;
+    if (!effect) return null;
+    if (effect === true) return { scale: 0.75, duration: 150 };
+    return {
+      scale: effect.scale ?? 0.75,
+      duration: effect.duration ?? 150,
+    };
+  }
+
+  private handleMouseDown = (e: MouseEvent): void => {
+    const effect = this.getClickEffect();
+    const target =
+      e.target instanceof HTMLElement ? e.target : this.lastHoveredElement;
+
+    if (this.options.onClick) {
+      this.options.onClick(target, e);
+    }
+
+    if (!effect) return;
+
+    this.isClicking = true;
+    this.clickScale = effect.scale ?? 0.75;
+    this.applyVisualStyles();
+    this.startAnimation();
+
+    if (this.clickTimeout) clearTimeout(this.clickTimeout);
+  };
+
+  private handleMouseUp = (): void => {
+    const effect = this.getClickEffect();
+    if (!effect) return;
+
+    const duration = effect.duration ?? 150;
+    if (this.clickTimeout) clearTimeout(this.clickTimeout);
+    this.clickTimeout = setTimeout(() => {
+      this.clickScale = 1;
+      this.isClicking = false;
+      this.applyVisualStyles();
+      this.clickTimeout = null;
+    }, duration);
+  };
 
   private handleMouseLeave = (e: MouseEvent): void => {
     if (!e.relatedTarget || (e.relatedTarget as Node).nodeName === 'HTML') {
@@ -724,6 +1034,15 @@ export class AuraCursor {
     if (this.centerDot) {
       this.centerDot.style.opacity = '0';
     }
+    this.trailElements.forEach((el) => {
+      el.style.opacity = '0';
+    });
+  }
+
+  private notifyHoverChange(element: HTMLElement | null): void {
+    if (this.lastHoveredElement === element) return;
+    this.lastHoveredElement = element;
+    this.options.onHoverInteractive?.(element);
   }
 
   private handleMouseMove = (e: MouseEvent): void => {
@@ -735,19 +1054,8 @@ export class AuraCursor {
       return;
     }
 
-    this.targetX = e.clientX;
-    this.targetY = e.clientY;
-
-    if (this.options.outlineMode || this.options.hideDefaultCursor) {
-      this.centerDotX = e.clientX;
-      this.centerDotY = e.clientY;
-      if (this.options.outlineMode) {
-        this.updateCursorDotPosition();
-      }
-      if (this.options.hideDefaultCursor) {
-        this.updateCenterDotPosition();
-      }
-    }
+    let nextX = e.clientX;
+    let nextY = e.clientY;
 
     const target = e.target;
     const hasHtmlTarget = !!target && target instanceof HTMLElement;
@@ -757,11 +1065,32 @@ export class AuraCursor {
       const wasOnInteractive = this.isOnInteractiveElement;
       this.isOnInteractiveElement = isInteractive;
 
+      if (isInteractive && this.getMagneticConfig()) {
+        const snapped = this.applyMagnetic(e.clientX, e.clientY, target);
+        nextX = snapped.x;
+        nextY = snapped.y;
+      }
+
+      this.targetX = nextX;
+      this.targetY = nextY;
+
+      if (this.options.outlineMode || this.options.hideDefaultCursor) {
+        this.centerDotX = e.clientX;
+        this.centerDotY = e.clientY;
+        if (this.options.outlineMode) {
+          this.updateCursorDotPosition();
+        }
+        if (this.options.hideDefaultCursor) {
+          this.updateCenterDotPosition();
+        }
+      }
+
       if (this.options.interactiveOnly) {
         if (!isInteractive) {
           if (wasOnInteractive) {
             this.hideCursor();
           }
+          this.notifyHoverChange(null);
           return;
         }
         if (!wasOnInteractive && this.cursorElement) {
@@ -779,11 +1108,30 @@ export class AuraCursor {
         this.isPointer = isInteractive;
         this.applyVisualStyles();
       }
-    } else if (
-      !this.options.interactiveOnly &&
-      this.cursorElement?.style.opacity === '0'
-    ) {
-      this.applyVisualStyles();
+
+      this.notifyHoverChange(isInteractive ? target : null);
+    } else {
+      this.targetX = nextX;
+      this.targetY = nextY;
+
+      if (this.options.outlineMode || this.options.hideDefaultCursor) {
+        this.centerDotX = e.clientX;
+        this.centerDotY = e.clientY;
+        if (this.options.outlineMode) {
+          this.updateCursorDotPosition();
+        }
+        if (this.options.hideDefaultCursor) {
+          this.updateCenterDotPosition();
+        }
+      }
+
+      if (
+        !this.options.interactiveOnly &&
+        this.cursorElement?.style.opacity === '0'
+      ) {
+        this.applyVisualStyles();
+      }
+      this.notifyHoverChange(null);
     }
 
     this.startAnimation();
@@ -795,6 +1143,8 @@ export class AuraCursor {
     document.addEventListener('mouseenter', this.handleMouseEnter);
     window.addEventListener('blur', this.handleWindowBlur);
     window.addEventListener('focus', this.handleWindowFocus);
+    window.addEventListener('mousedown', this.handleMouseDown);
+    window.addEventListener('mouseup', this.handleMouseUp);
   }
 
   private removeEventListeners(): void {
@@ -803,6 +1153,8 @@ export class AuraCursor {
     document.removeEventListener('mouseenter', this.handleMouseEnter);
     window.removeEventListener('blur', this.handleWindowBlur);
     window.removeEventListener('focus', this.handleWindowFocus);
+    window.removeEventListener('mousedown', this.handleMouseDown);
+    window.removeEventListener('mouseup', this.handleMouseUp);
   }
 
   private setupResizeListener(): void {
@@ -854,6 +1206,7 @@ export class AuraCursor {
     this.cursorDot = null;
     removeNode(this.centerDot);
     this.centerDot = null;
+    this.clearTrailElements();
     removeOrphanedCursors();
   }
 
